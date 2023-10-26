@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>xiaoying下载网</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -31,15 +32,25 @@
         div{
             text-align: center;
         }
+        h2{
+            color: #eaff00;
+            text-align: center;
+        }
+        h3{
+            color: #ffffff;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <h1>欢迎来到 xiaoying下载网</h1>
+    <br>
+    <br>
+    <h2 id="IPadress"></h2>
+    <h3 id="NowTime"></h3>
     <!--  -->
    <div>
-    <br>
-    <br>
-    <br>
+   
     Ps：新人来了，先分享将近10T的资源，使用最好用的 123网盘下载，无需登录，不限速下载。所有资源都是免费使用。0套路，无任何引导。。。<br>
 
     安装步骤参考 含这个 "README" 关键字的文档，有些软件需要独立下载**README**文档。安装文档有图片，跟着点就行。。。<br>
@@ -49,7 +60,7 @@
     其他平台基本上不会发文章，唯一在B站更新，B站账号：创世十鹰（今天过来水一水文章就跑了）<br>
     
     总索引：<br>
-    
+
     Adobe全家桶：https://www.123pan.com/s/yS8UVv-NkFed.html提取码:6666<br>
     
     AutoCAD：https://www.123pan.com/s/yS8UVv-2kFed.html提取码:6666<br>
@@ -613,5 +624,44 @@
     所有资源来源网络收集，仅供学习使用，商业勿用！主要来自： 脚本之家，下载集，MSDN，隔壁Up影视后期系统教学，设计宝藏，白云居，花间社，微博网友，以及国外网站等等等，还有很多网站提供的资源，记不清出处了。。。<br>
    </div>
     <!--  -->
+    <script>
+        const IPadress = document.getElementById("IPadress");
+        // 使用 Axios 发送 GET 请求获取数据
+        axios.get('https://api.ipify.org/?format=json')
+        .then(response => {
+            // 设置元素的textContent为获取的数据
+            IPadress.textContent = "你的 IP 地址为: " + response.data.ip;
+        })
+        .catch(error => {
+            console.error("Error fetching data: " + error);
+        });
+        //显示时间
+        const NowTime = document.getElementById("NowTime");
+        function updateClock() {
+        const currentDate = new Date();
+        const timeString = currentDate;
+        // 生成随机颜色
+        //const randomColor = getRandomColor();
+
+        // 更新页面上显示时间的元素
+        NowTime.textContent = timeString;
+        // NowTime.style.color = randomColor;
+        }
+
+        // function getRandomColor() {
+        // // 生成随机颜色的代码
+        // const letters = '0123456789ABCDEF';
+        // let color = '#';
+        // for (let i = 0; i < 6; i++) {
+        //     color += letters[Math.floor(Math.random() * 16)];
+        // }
+        // return color;
+        // }
+
+        // 初始调用一次，以便立即显示时间
+        updateClock();
+        // 每秒更新一次时间
+        setInterval(updateClock, 1000);
+    </script>
 </body>
 </html>
