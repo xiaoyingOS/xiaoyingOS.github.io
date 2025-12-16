@@ -5,7 +5,21 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>xiaoying下载网</title>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> -->
+    <script>
+        (function() {
+            var script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js';
+            script.onerror = function() {
+                console.log('MathJS CDN加载失败，使用本地文件');
+                var localScript = document.createElement('script');
+                localScript.src = './CDN/axios.min.js';
+                document.head.appendChild(localScript);
+            };
+            document.head.appendChild(script);
+        })();
+    </script>
+
     <style>
         body {
             margin: 0;
@@ -61,6 +75,72 @@
             margin-top: -10px;
         }
         }
+
+        /* 顶部标题栏 */
+            .top-header {
+            width: 100%;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* 标题容器 */
+        .header-title {
+            display: inline-block;
+            font-size: clamp(1.5em, 4vw, 2.5em);
+            font-weight: 800;
+            white-space: nowrap;
+            letter-spacing: 1px;
+            background-color: #000000;
+            border-radius: 10px;
+            padding: 8px 20px;
+            box-shadow:
+                0 0 15px rgba(241, 196, 15, 0.6),
+                0 0 30px rgba(52, 152, 219, 0.4),
+                0 0 45px rgba(26, 188, 156, 0.3);
+            text-align: center;
+            margin: 0;
+        }
+
+        /* 标题文字渐变效果 */
+        .title-text {
+            background: linear-gradient(135deg,
+                #f1c40f 0%,
+                #f7dc6f 15%,
+                #1abc9c 30%,
+                #ffffff 50%,
+                #3498db 70%,
+                #f7dc6f 85%,
+                #f1c40f 100%);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: titleTextFlow 8s ease-in-out infinite;
+            text-shadow: 0 0 15px rgba(241, 196, 15, 0.3);
+            display: inline-block;
+        }
+
+        @keyframes titleTextFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 手机端适配 */
+        @media (max-width: 768px) {
+            .top-header {
+                padding: 10px 15px;
+            }
+
+            .header-title {
+                font-size: clamp(1.2em, 3.5vw, 2em);
+                padding: 6px 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -70,8 +150,34 @@
     <h2 id="IPadress"></h2>
     <h3 id="NowTime"></h3>
     <!--  -->
+    <!-- 顶部标题栏 -->
+    <div class="top-header">
+        <div class="header-title" onclick="openWebPage()" style="cursor: pointer;">
+            <span class="title-text">点我去👉AiOS: 专业数学计算器和aios聊天</span>
+        </div>
+    </div>
+
+    <script>
+        function openWebPage() {
+            window.open('./aios.html', '_blank');
+        }
+    </script>
    <div>
-   
+    <a href="./qrcode.html" target="_blank">
+        <button style="
+        /* padding: 20px 40px; */
+        margin: 3px;
+        font-size: 21px;
+        font-weight: bold;
+        background: linear-gradient(135deg, #ff0000 0%, #000000 100%);
+        color: white;
+        border: none;
+        border-radius: 13px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);">二维码生成工具</button>
+    </a>
+   <br>
     Ps：新人来了，先分享将近10T的资源，使用最好用的 123网盘下载，无需登录，不限速下载。所有资源都是免费使用。0套路，无任何引导。。。<br>
 
     安装步骤参考 含这个 "README" 关键字的文档，有些软件需要独立下载**README**文档。安装文档有图片，跟着点就行。。。<br>
@@ -81,8 +187,18 @@
     其他平台基本上不会发文章，唯一在B站更新，B站账号：创世十鹰/xiaoyingORG <br>
     
     总索引：<br>
+    听歌必备：<a href="https://www.123684.com/s/yS8UVv-JTGed">👉点我跳转下载🔗提取码:6666🐬</a><br>
+    【备用：Adobe全家桶：<a href="https://www.123pan.com/s/yS8UVv-hiFed.html ">👉点我跳转下载🔗提取码:6666🐬</a>】<br>
+    Adobe全家桶总索引：<a href="https://www.123pan.com/s/yS8UVv-HiFed.html ">👉点我跳转下载🔗提取码:6666🐬</a>【含大师版和SP版，win+mac】<br>
+    
+    PS：Adobe全家桶如果有解压密码，密码就是 @vposy <br><br>
 
-    Adobe全家桶：<a href="https://www.123pan.com/s/yS8UVv-NkFed.html">👉点我跳转下载🔗提取码:6666🐬</a><br>
+    【这个文件不会再更新，包含2017-2024版 】
+    天翼云盘,Adobe全家桶(win+Mac)<a href="https://cloud.189.cn/t/iiaQ3qbueiqy">👉点我跳转下载🔗访问码:hvt4🐬</a>访问码：hvt4<br>
+    天翼云盘,专业软件(只有win版)<a href="https://cloud.189.cn/web/share?code=IRBZb2BJJJve">👉点我跳转下载🔗访问码:jgl6🐬</a>访问码：jgl6<br>
+    (包含各行各业软件，比如Adobe，编程，CAD，建模，仿真，编程，什么软件都有) <br><br>
+
+    Adobe全家桶不全：<a href="https://www.123pan.com/s/yS8UVv-NkFed.html">👉点我跳转下载🔗提取码:6666🐬</a><br>
     
     AutoCAD：<a href="https://www.123pan.com/s/yS8UVv-2kFed.html">👉点我跳转下载🔗提取码:6666🐬</a><br>
     
@@ -107,12 +223,6 @@
     软件资源 Windows平台和Mac平台都有，自己找了选择下载，最好转存也行<br>
     
     PS 2024(Beta)_25.1总索引：<a href="https://www.123pan.com/s/yS8UVv-VcFed.html ">👉点我跳转下载🔗提取码:6666🐬</a>【含win+mac】<br>
-    
-    Adobe全家桶总索引：<a href="https://www.123pan.com/s/yS8UVv-HiFed.html ">👉点我跳转下载🔗提取码:6666🐬</a>【含大师版和SP版，win+mac】<br>
-    
-    PS：Adobe全家桶如果有解压密码，密码就是 @vposy <br>
-    
-    【备用：Adobe全家桶：<a href="https://www.123pan.com/s/yS8UVv-hiFed.html ">👉点我跳转下载🔗提取码:6666🐬</a>】<br>
     
     音乐软件总索引：<a href="https://www.123pan.com/s/yS8UVv-u7Fed.html ">👉点我跳转下载🔗提取码:6666🐬</a>【含win+mac】<br>
     
