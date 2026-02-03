@@ -1,0 +1,2743 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>扫码识别</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 3px;
+            overflow-x: hidden;
+        }
+        
+        .app-container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 0;
+        }
+        
+        /* .main-content {
+            
+        } */
+        
+        .header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .action-area {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        
+        .preview-area {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            padding: 10px;
+            width: 300px;
+            height: 200px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+        }
+        
+        .preview-content {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+        }
+        
+        .preview-placeholder {
+            text-align: center;
+            color: #666;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .preview-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+        
+        .preview-image {
+            max-width: 160px;
+            max-height: 160px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            vertical-align: middle;
+        }
+        
+        .image-preview {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .scan-preview {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            width: 120px;
+            margin-bottom: 0;
+            margin-right: 120px;
+        }
+        
+        .title-section {
+            color: white;
+        }
+        
+        .title {
+            font-size: 2.5rem;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .scan-button {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            padding: 12px 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #667eea;
+            font-weight: 500;
+        }
+        
+        .scan-button:hover {
+            background: white;
+            transform: translateY(-2px);
+        }
+        
+        .scan-button:active {
+            transform: translateY(-1px);
+        }
+        
+        .upload-section {
+            display: none;
+        }
+        
+        .upload-button {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            padding: 15px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #667eea;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        
+        .upload-button:hover {
+            background: white;
+            transform: translateY(-2px);
+        }
+        
+        .upload-button:active {
+                    transform: translateY(-1px);
+                }
+        
+                .result-section {
+
+                            background: rgba(255, 255, 255, 0.9);
+
+                            padding: 20px 3px 20px 3px;
+
+                            margin-bottom: 20px;
+
+                        }                .result-header {
+                            margin-bottom: 10px;
+                            padding-left: 0;
+                        }                .result-header h3 {
+                            color: #333;
+                            font-size: 1.2rem;
+                        }
+                        
+                        .result-actions {
+
+                                    display: flex;
+
+                                    gap: 8px;
+
+                                    margin-bottom: 15px;
+
+                                    align-items: stretch;
+
+                                    flex-wrap: nowrap;
+
+                                    justify-content: center;
+
+                                }.action-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            white-space: nowrap;
+            height: 32px;
+            box-sizing: border-box;
+        }                .action-button:hover {
+                    transform: translateY(-1px);
+                }
+        
+                .action-button:active {
+                    transform: translateY(0);
+                }
+        
+                .result-content {
+
+                            background: white;
+
+                            padding: 15px;
+
+                            min-height: 300px;
+
+                            max-height: 500px;
+
+                            border: 1px solid #e0e0e0;
+
+                            border-radius: 4px;
+
+                            font-size: 1rem;
+
+                            line-height: 1.5;
+
+                            color: #333;
+
+                            white-space: pre-wrap;
+
+                            word-wrap: break-word;
+
+                            overflow-y: auto;
+
+                            overflow-x: auto;
+
+                        }                .result-placeholder {
+                    color: #999;
+                    font-style: italic;
+                }
+        
+                .history-section {
+
+                            background: rgba(255, 255, 255, 0.9);
+
+                            padding: 20px 3px 20px 3px;
+
+                        }                .history-header {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-bottom: 15px;
+                            padding-left: 0;
+                        }
+                
+                        .history-header h3 {
+                            color: #333;
+                            font-size: 1.2rem;
+                        }        
+                .history-content {
+                    background: white;
+                    padding: 15px;
+                    min-height: 150px;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 4px;
+                }
+        
+                .history-placeholder {
+                    color: #999;
+                    font-style: italic;
+                }
+        
+                .history-item {
+                            border-bottom: 1px solid #f0f0f0;
+                        }
+                
+                        .history-item:last-child {
+                            border-bottom: none;
+                        }
+                
+                        .history-header {
+                            display: flex;
+                            align-items: center;
+                            padding: 10px;
+                            cursor: pointer;
+                            transition: background-color 0.2s;
+                        }
+                
+                        .history-header:hover {
+                            background-color: rgba(102, 126, 234, 0.05);
+                        }
+                
+                        .history-toggle {
+                            color: #667eea;
+                            font-weight: bold;
+                            margin-right: 8px;
+                            transition: transform 0.2s;
+                            display: inline-block;
+                            width: 16px;
+                            text-align: center;
+                        }
+                
+                        .history-preview {
+                            flex: 1;
+                            word-wrap: break-word;
+                            margin-right: 10px;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            font-size: 0.9rem;
+                        }
+                
+                        .history-time {
+                            color: #666;
+                            font-size: 0.8rem;
+                            white-space: nowrap;
+                        }
+                
+                        .history-content-detail {
+                            display: none;
+                            padding: 0 10px 10px 34px;
+                            border-top: 1px solid #f8f8f8;
+                            background-color: rgba(102, 126, 234, 0.02);
+                        }
+                
+                        .history-full-text {
+                            word-wrap: break-word;
+                            font-size: 0.9rem;
+                            line-height: 1.4;
+                            color: #333;
+                            max-height: 200px;
+                            overflow-y: auto;
+                            padding: 8px;
+                            background: white;
+                            border-radius: 4px;
+                            border: 1px solid #e8e8e8;
+                        }                .scan-modal {            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+        }
+        
+        .scan-modal.active {
+            display: flex;
+        }
+        
+        .scan-header {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .scan-header h2 {
+            font-size: 1.2rem;
+        }
+        
+        .close-scan {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+        
+        .close-scan:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .scan-video-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        #scan-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            pointer-events: none;
+        }
+        
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #667eea, transparent);
+            animation: scan 2s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        
+        .scan-tips {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 20px;
+            font-size: 0.9rem;
+        }
+        
+        .scan-controls {
+            position: absolute;
+            top: 80px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+        }
+        
+        .scan-control-btn {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1.2rem;
+        }
+        
+        .scan-control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+        
+        .scan-control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .scan-control-btn.active {
+            background: rgba(102, 126, 234, 0.8);
+        }
+        
+        .scan-method-selector {
+            position: absolute;
+            top: 80px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 8px;
+            padding: 10px;
+            color: white;
+            font-size: 0.8rem;
+            z-index: 10;
+        }
+        
+        .scan-method-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        
+        .scan-method-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .scan-method-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .scan-method-option.active {
+            background: rgba(102, 126, 234, 0.3);
+        }
+        
+        .scan-method-option input[type="radio"] {
+            margin: 0;
+        }
+        
+        .upload-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .upload-modal.active {
+            display: flex;
+        }
+        
+        .upload-content {
+            background: white;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .upload-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .upload-header h2 {
+            color: #333;
+            font-size: 1.5rem;
+        }
+        
+        .close-upload {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+        
+        .close-upload:hover {
+            background: #f0f0f0;
+        }
+        
+        .upload-area {
+            border: 2px dashed #667eea;
+            padding: 40px 20px;
+            text-align: center;
+            background-color: rgba(102, 126, 234, 0.05);
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            background-color: rgba(102, 126, 234, 0.1);
+        }
+        
+        .upload-area.dragover {
+            background-color: rgba(102, 126, 234, 0.2);
+            border-color: #764ba2;
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .upload-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 15px;
+        }
+        
+        .upload-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .preview-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            margin-bottom: 15px;
+        }
+        
+        .preview-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .preview-button {
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        
+        .analyze-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .reset-button {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .preview-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: -100%;
+            padding: 10px 10px 10px 8px;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 500;
+            z-index: 2000;
+            opacity: 0;
+            transition: all 0.4s ease-out;
+            border-radius: 8px;
+            box-shadow: -6px 6px 20px rgba(0, 0, 0, 0.25), -3px 3px 10px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-width: 150px;
+            max-width: 250px;
+            text-align: left;
+        }
+        
+        .toast.show {
+            right: 3px;
+            opacity: 1;
+            transition-delay: 0.1s;
+        }
+        
+        .toast.success {
+            background: linear-gradient(135deg, #00b894, #00cec9, #74b9ff);
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease infinite;
+        }
+        
+        .toast.error {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24, #feca57);
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease infinite;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* 新增条形码格式标签样式 */
+        .format-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            margin-left: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 0.75rem;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        
+        
+        
+        .format-badge.barcode {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+        
+        .format-badge.qrcode {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+        }
+        
+        /* 性能优化：减少重绘 */
+        .gpu-accelerated {
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            perspective: 1000px;
+        }
+        
+        @media (max-width: 768px) {
+            .action-area {
+                flex-direction: row;
+                align-items: flex-start;
+                gap: 10px;
+                justify-content: flex-end;
+            }
+            
+            .preview-area {
+                width: 200px;
+                height: 170px;
+            }
+            
+            .preview-content {
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .preview-image {
+                max-width: 140px;
+                max-height: 140px;
+            }
+            
+            .button-container {
+                width: 120px;
+                flex-direction: column;
+                justify-content: center;
+                margin-left: auto;
+                margin-right: 13px;
+                margin-bottom: 15px;
+                gap: 0;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+            
+            .subtitle {
+                font-size: 1rem;
+            }
+            
+            .scan-method-selector {
+                left: 5px;
+                font-size: 0.7rem;
+                padding: 8px;
+            }
+            
+            .scan-controls {
+                right: 5px;
+            }
+            
+            .scan-control-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 1rem;
+            }
+            
+            .upload-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="main-content">
+            <header class="header">
+                        <div class="title-section">
+                            <h1 class="title">扫码识别</h1>
+                            <p class="subtitle">多引擎全屏扫描，准确识别二维码和条形码内容</p>
+                        </div>
+                    </header>
+                            
+                            <!-- 操作区域容器 -->
+                            <div class="action-area">
+                                <!-- 预览容器 -->
+                                            <div class="preview-area">
+                                                <div class="preview-content" id="preview-content">
+                                                    <div class="preview-placeholder">
+                                                        <div class="preview-icon">📷</div>
+                                                        <p>预览区</p>
+                                                    </div>
+                                                </div>
+                                            </div>                                
+                                <!-- 按钮容器 -->
+                                <div class="button-container">
+                                    <button class="scan-button" onclick="openScanModal()">
+                                        [—] 扫一扫
+                                    </button>
+                                    <button class="upload-button" onclick="openUploadModal('file')">
+                                        📁 上传文件
+                                    </button>
+                                    <button class="upload-button" onclick="openUploadModal('image')">
+                                        🖼️ 上传图片
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- 识别结果显示区域 -->            
+            <section class="result-section">
+            <div class="result-header">
+                <h3>识别结果 <span id="result-format" class="format-badge" style="display: none;"></span></h3>
+            </div>
+            <div class="result-actions">
+                <button class="action-button" onclick="clearResult()">🗑️ 清除</button>
+                <button class="action-button" onclick="undoResult()">↶ 撤销</button>
+                <button class="action-button" onclick="redoResult()">↷ 反撤销</button>
+                <button class="action-button" onclick="copyResult()">📋 复制</button>
+            </div>
+            <div class="result-content" id="result-content">
+                <p class="result-placeholder">暂无识别结果</p>
+            </div>
+        </section>
+        
+        <!-- 识别历史区域 -->
+        <section class="history-section">
+            <div class="history-header">
+                <h3>识别历史</h3>
+                <button class="action-button" onclick="clearHistory()">🗑️ 清除</button>
+            </div>
+            <div class="history-content" id="history-content">
+                <p class="history-placeholder">暂无识别历史</p>
+            </div>
+        </section>
+        </div>
+    </div>
+    
+    <!-- 扫描模态框 -->
+    <div id="scan-modal" class="scan-modal">
+        <div class="scan-header">
+            <h2 id="scan-title">全屏扫码</h2>
+            <button class="close-scan" onclick="closeScanModal()">✕</button>
+        </div>
+        <div class="scan-video-container">
+            <video id="scan-video" autoplay playsinline></video>
+            <div class="scan-overlay">
+                <div class="scan-line"></div>
+            </div>
+            
+            <!-- 扫描控制按钮 -->
+            <div class="scan-controls">
+                <button class="scan-control-btn" onclick="flipCamera()" title="翻转摄像头">
+                    🔄
+                </button>
+                <button class="scan-control-btn" onclick="toggleFlash()" title="闪光灯">
+                    💡
+                </button>
+                <button class="scan-control-btn" onclick="toggleMirror()" title="镜像翻转">
+                    🪞
+                </button>
+                <button class="scan-control-btn" id="batch-scan-btn" onclick="startBatchScan()" title="批量识别">
+                    📚
+                </button>
+                <button class="scan-control-btn" onclick="selectImageFromScan()" title="选择图片">
+                    🖼️
+                </button>
+                <button class="scan-control-btn" onclick="selectFileFromScan()" title="选择文件">
+                    📁
+                </button>
+                <button class="scan-control-btn" onclick="testScanEngines()" title="测试所有引擎">
+                    🧪
+                </button>
+            </div>
+            
+            <!-- 扫描方法选择器 -->
+            <div class="scan-method-selector">
+                <div class="scan-method-title">扫描引擎</div>
+                <div class="scan-method-option active">
+                    <input type="radio" name="scan-method" value="native" checked onchange="changeScanMethod('native')">
+                    <label>原生API</label>
+                </div>
+                <div class="scan-method-option">
+                    <input type="radio" name="scan-method" value="zxing" onchange="changeScanMethod('zxing')">
+                    <label>Zxing</label>
+                </div>
+                <div class="scan-method-option">
+                    <input type="radio" name="scan-method" value="jsqr" onchange="changeScanMethod('jsqr')">
+                    <label>jsQR</label>
+                </div>
+            </div>
+            
+            <div class="scan-tips" id="scan-tips">全屏扫描模式 - 将二维码对准屏幕任意位置</div>
+            
+            <!-- 权限请求区域 -->
+            <div id="permission-area" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; z-index: 20;">
+                <div style="background: rgba(0,0,0,0.8); padding: 30px; border-radius: 10px; max-width: 300px;">
+                    <h3 style="margin-bottom: 15px;">需要摄像头权限</h3>
+                    <p style="margin-bottom: 20px; font-size: 0.9rem;">请允许访问摄像头以使用扫描功能</p>
+                    <button onclick="requestCameraPermission()" style="background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-size: 1rem;">
+                        授权摄像头
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 上传模态框 -->
+    <div id="upload-modal" class="upload-modal">
+        <div class="upload-content">
+            <div class="upload-header">
+                <h2 id="upload-title">上传文件</h2>
+                <button class="close-upload" onclick="closeUploadModal()">✕</button>
+            </div>
+            
+            <div class="upload-area" id="upload-area">
+                <div class="upload-icon">📁</div>
+                <p>拖拽文件到此处或点击选择文件</p>
+                <p style="margin-top: 10px; font-size: 0.9rem; color: #666;">支持 JPG, PNG, GIF, BMP 格式</p>
+                <input type="file" id="file-input" class="file-input" accept="image/*" onchange="handleFileSelect(event)">
+                <button class="upload-button" onclick="document.getElementById('file-input').click()">选择文件</button>
+            </div>
+            
+            <div id="preview-container" class="preview-container hidden">
+                <img id="preview-image" class="preview-image" alt="预览图片">
+                <div class="preview-controls">
+                    <button class="preview-button analyze-button" onclick="analyzeImage()">识别二维码/条形码</button>
+                    <button class="preview-button reset-button" onclick="resetUpload()">重新选择</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast 提示 -->
+    <div id="toast" class="toast"></div>
+    
+    <!-- 临时扫描区域（隐藏） -->
+    <div id="temp-scan-area" style="position: absolute; left: -9999px; width: 300px; height: 300px;"></div>
+    
+    <!-- 扫描模态框内的文件输入（隐藏） -->
+    <input type="file" id="scan-image-input" class="file-input" accept="image/*" onchange="handleScanImageSelect(event)" style="display: none;">
+    <input type="file" id="scan-file-input" class="file-input" accept="image/*" onchange="handleScanFileSelect(event)" style="display: none;">
+
+    <!-- 引入多个扫描库 -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
+
+    <script>
+        let scanVideo = document.getElementById('scan-video');
+        let scanCanvas = document.createElement('canvas');
+        let scanContext = scanCanvas.getContext('2d');
+        let scanning = false;
+        let currentScanMethod = 'native';
+        let currentCamera = 'environment';
+        let flashState = false;
+        let zxingScanner = null;
+        let mirrorState = false;
+        let barcodeMode = false; // 新增：条形码模式标志
+        let batchScanResults = []; // 新增：批量扫描结果数组
+        let batchScanning = false; // 新增：批量扫描状态标志
+        let lastBatchScanTime = 0; // 新增：上次批量扫描的时间
+        const BATCH_SCAN_COOLDOWN = 2000; // 批量扫描冷却时间（毫秒）
+        
+        // 全局扫描状态管理
+        let scanEngines = {
+            jsqr: { active: false, stopFunction: null },
+            zxing: { active: false, stopFunction: null },
+            native: { active: false, stopFunction: null }
+        };
+        
+        // 当前活跃的扫描引擎
+        let activeEngine = null;
+        
+        // 识别结果和历史相关变量
+        let currentResult = '';
+        let resultHistory = [];
+        let undoStack = [];
+        let redoStack = [];
+        let currentFormat = ''; // 新增：当前识别的码格式
+        
+        // 性能优化：使用 requestAnimationFrame 节流
+        let lastScanTime = 0;
+        const SCAN_THROTTLE = 100; // 扫描间隔（毫秒）
+        
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            setupDragAndDrop();
+            loadHistory();
+            checkBarcodeDetectorSupport();
+            checkCameraSupport();
+            
+            // 性能优化：启用GPU加速
+            document.querySelectorAll('.scan-modal, .upload-modal, .toast').forEach(el => {
+                el.classList.add('gpu-accelerated');
+            });
+        });
+        
+        // 检查摄像头支持
+        async function checkCameraSupport() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                console.warn('浏览器不支持摄像头访问');
+                showToast('您的浏览器不支持摄像头功能，请使用现代浏览器', 'error');
+                return;
+            }
+            
+            try {
+                // 尝试枚举摄像头设备
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                
+                if (videoDevices.length === 0) {
+                    console.warn('未找到摄像头设备');
+                    showToast('未检测到摄像头设备', 'error');
+                } else {
+                    console.log(`找到 ${videoDevices.length} 个摄像头设备`);
+                }
+            } catch (error) {
+                console.warn('枚举摄像头设备失败:', error);
+            }
+        }
+        
+        // 检查原生条码检测器支持
+        function checkBarcodeDetectorSupport() {
+            if ('BarcodeDetector' in window) {
+                console.log('原生BarcodeDetector API 支持');
+            } else {
+                console.log('原生BarcodeDetector API 不支持');
+                // 禁用原生API选项
+                const nativeOption = document.querySelector('input[value="native"]');
+                if (nativeOption) {
+                    nativeOption.disabled = true;
+                    nativeOption.parentElement.style.opacity = '0.5';
+                }
+            }
+        }
+        
+        // 请求摄像头权限
+        async function requestCameraPermission() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true, 
+                    audio: false 
+                });
+                
+                // 立即关闭流，这只是权限测试
+                stream.getTracks().forEach(track => track.stop());
+                
+                // 隐藏权限请求区域
+                document.getElementById('permission-area').style.display = 'none';
+                
+                // 启动摄像头
+                await startCamera(currentCamera);
+                showToast('摄像头权限已授权', 'success');
+                
+            } catch (error) {
+                let message = '摄像头权限请求失败';
+                
+                if (error.name === 'NotAllowedError') {
+                    message = '摄像头权限被拒绝，请在浏览器设置中允许访问';
+                } else if (error.name === 'NotFoundError') {
+                    message = '未找到摄像头设备';
+                }
+                
+                showToast(message, 'error');
+                console.error('Permission request error:', error);
+            }
+        }
+        
+        // 打开扫描模态框
+        async function openScanModal() {
+            const modal = document.getElementById('scan-modal');
+            modal.classList.add('active');
+            
+            // 显示权限请求区域
+            document.getElementById('permission-area').style.display = 'block';
+            document.getElementById('scan-tips').style.display = 'none';
+            
+            // 尝试自动启动摄像头
+            try {
+                await startCamera(currentCamera);
+                // 如果成功，隐藏权限请求区域
+                document.getElementById('permission-area').style.display = 'none';
+                document.getElementById('scan-tips').style.display = 'block';
+            } catch (error) {
+                console.log('自动摄像头启动失败，显示权限请求:', error.message);
+                // 显示权限请求区域，等待用户手动授权
+                showToast('请点击"授权摄像头"按钮开始扫描', 'error');
+            }
+        }
+        
+        // 启动摄像头
+        async function startCamera(facingMode = 'environment') {
+            if (scanVideo.srcObject) {
+                scanVideo.srcObject.getTracks().forEach(track => track.stop());
+            }
+            
+            // 检查浏览器支持
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error('您的浏览器不支持摄像头访问功能');
+            }
+            
+            let stream = null;
+            
+            try {
+                // 首先尝试理想配置
+                const constraints = {
+                    video: { 
+                        facingMode: facingMode,
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    },
+                    audio: false
+                };
+                
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                } catch (idealError) {
+                    console.warn('理想配置失败，尝试基本配置:', idealError);
+                    
+                    // 尝试基本配置
+                    const basicConstraints = {
+                        video: { 
+                            facingMode: facingMode,
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        },
+                        audio: false
+                    };
+                    
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia(basicConstraints);
+                    } catch (basicError) {
+                        console.warn('基本配置失败，尝试最简配置:', basicError);
+                        
+                        // 尝试最简配置
+                        const minimalConstraints = {
+                            video: true,
+                            audio: false
+                        };
+                        
+                        stream = await navigator.mediaDevices.getUserMedia(minimalConstraints);
+                    }
+                }
+                
+                if (!stream) {
+                    throw new Error('无法获取摄像头流');
+                }
+                
+                scanVideo.srcObject = stream;
+                scanVideo.setAttribute('playsinline', true);
+                scanVideo.setAttribute('muted', true);
+                
+                // 等待视频加载完成
+                await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('视频加载超时'));
+                    }, 5000); // 减少超时时间
+                    
+                    scanVideo.onloadedmetadata = () => {
+                        clearTimeout(timeout);
+                        resolve();
+                    };
+                    
+                    scanVideo.onerror = (error) => {
+                        clearTimeout(timeout);
+                        reject(error);
+                    };
+                });
+                
+                // 尝试播放视频
+                try {
+                    await scanVideo.play();
+                } catch (playError) {
+                    console.warn('自动播放失败，可能需要用户交互:', playError);
+                    showToast('请点击屏幕开始扫描', 'success');
+                    
+                    // 添加点击监听器
+                    scanVideo.addEventListener('click', async function playVideo() {
+                        try {
+                            await scanVideo.play();
+                            scanVideo.removeEventListener('click', playVideo);
+                            startScanning();
+                            showToast('扫描已开始', 'success');
+                        } catch (error) {
+                            console.error('手动播放失败:', error);
+                            showToast('视频播放失败，请刷新页面重试', 'error');
+                        }
+                    }, { once: true });
+                    
+                    return; // 等待用户点击
+                }
+                
+                // 开始扫描
+                startScanning();
+                
+            } catch (error) {
+                // 提供详细的错误信息
+                let errorMessage = '无法访问摄像头';
+                
+                if (error.name === 'NotAllowedError') {
+                    errorMessage = '摄像头权限被拒绝，请在浏览器设置中允许摄像头访问';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage = '未找到摄像头设备';
+                } else if (error.name === 'NotReadableError') {
+                    errorMessage = '摄像头被其他应用占用';
+                } else if (error.name === 'OverconstrainedError') {
+                    errorMessage = '摄像头不支持请求的配置';
+                } else if (error.name === 'TypeError') {
+                    errorMessage = '摄像头权限请求被阻止';
+                } else {
+                    errorMessage = `摄像头访问失败: ${error.message}`;
+                }
+                
+                throw new Error(errorMessage);
+            }
+        }
+        
+        // 停止除指定引擎外的所有引擎
+        function stopAllEnginesExcept(exceptEngine) {
+            Object.keys(scanEngines).forEach(engine => {
+                if (engine !== exceptEngine && scanEngines[engine].active) {
+                    console.log(`停止引擎: ${engine}`);
+                    if (scanEngines[engine].stopFunction) {
+                        scanEngines[engine].stopFunction();
+                    }
+                }
+            });
+        }
+        
+        // 开始扫描
+        function startScanning() {
+            scanning = true;
+            
+            switch (currentScanMethod) {
+                case 'jsqr':
+                    startJsQRScanning();
+                    break;
+                case 'zxing':
+                    startZxingScanning();
+                    break;
+                case 'native':
+                    startNativeScanning();
+                    break;
+                default:
+                    startJsQRScanning();
+            }
+        }
+        
+        // 检测条形码格式
+        function detectBarcodeFormat(data) {
+            if (!data) return '';
+            
+            // 检测常见条形码格式
+            if (/^\d{12,13}$/.test(data)) {
+                return data.length === 12 ? 'UPC-A' : 'EAN-13';
+            }
+            if (/^\d{8}$/.test(data)) {
+                return 'EAN-8';
+            }
+            if (/^\d{7,8}$/.test(data) && /[0-9]{1}[0-9]{6}/.test(data)) {
+                return 'UPC-E';
+            }
+            if (/^[0-9A-Z\-. $/+%]{1,48}$/.test(data)) {
+                return 'Code 39';
+            }
+            if (/^[A-Za-z0-9!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ ]+$/.test(data)) {
+                return 'Code 128';
+            }
+            
+            return 'QR Code';
+        }
+        
+        // jsQR扫描 - 优化版本
+        function startJsQRScanning() {
+            // 防止重复启动
+            if (scanEngines.jsqr.active) {
+                console.log('jsQR 已在运行中');
+                return;
+            }
+            
+            console.log('启动jsQR扫描');
+            
+            // 停止其他引擎
+            stopAllEnginesExcept('jsqr');
+            
+            // 确保视频元素可见
+            scanVideo.style.display = 'block';
+            
+            // 标记引擎为活跃状态
+            scanEngines.jsqr.active = true;
+            activeEngine = 'jsqr';
+            
+            let animationId = null;
+            
+            // 定义停止函数
+            scanEngines.jsqr.stopFunction = function() {
+                scanEngines.jsqr.active = false;
+                if (activeEngine === 'jsqr') {
+                    activeEngine = null;
+                }
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+                console.log('jsQR 已停止');
+                return Promise.resolve();
+            };
+            
+            function tick() {
+                // 确保只有当前活跃引擎继续运行
+                if (!scanEngines.jsqr.active || activeEngine !== 'jsqr') {
+                    return;
+                }
+                
+                // 性能优化：节流扫描
+                const now = Date.now();
+                if (now - lastScanTime < SCAN_THROTTLE) {
+                    animationId = requestAnimationFrame(tick);
+                    return;
+                }
+                
+                if (scanVideo.readyState === scanVideo.HAVE_ENOUGH_DATA) {
+                    scanCanvas.width = scanVideo.videoWidth;
+                    scanCanvas.height = scanVideo.videoHeight;
+                    scanContext.drawImage(scanVideo, 0, 0, scanCanvas.width, scanCanvas.height);
+                    
+                    const imageData = scanContext.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "dontInvert",
+                    });
+                    
+                    if (code) {
+                        lastScanTime = now;
+                        const format = detectBarcodeFormat(code.data);
+                        handleScanResult(code.data, 'jsQR', format);
+                        // 在批量扫描模式下不停止扫描
+                        if (!batchScanning) {
+                            return;
+                        }
+                    }
+                }
+                
+                animationId = requestAnimationFrame(tick);
+            }
+            
+            tick();
+        }
+        
+        // Zxing扫描 - 优化版本
+        function startZxingScanning() {
+            // 防止重复启动
+            if (scanEngines.zxing.active) {
+                console.log('Zxing 已在运行中');
+                return;
+            }
+            
+            console.log('启动Zxing扫描');
+            
+            // 停止其他引擎
+            stopAllEnginesExcept('zxing');
+            
+            // 确保视频元素可见
+            scanVideo.style.display = 'block';
+            
+            // 标记引擎为活跃状态
+            scanEngines.zxing.active = true;
+            activeEngine = 'zxing';
+            
+            let scanInterval = null;
+            
+            // 定义停止函数
+            scanEngines.zxing.stopFunction = function() {
+                scanEngines.zxing.active = false;
+                if (activeEngine === 'zxing') {
+                    activeEngine = null;
+                }
+                if (scanInterval) {
+                    clearInterval(scanInterval);
+                    scanInterval = null;
+                }
+                console.log('Zxing 已停止');
+                return Promise.resolve();
+            };
+            
+            // 使用定时器分析视频帧 - 增加间隔以提高性能
+            scanInterval = setInterval(async () => {
+                // 确保只有当前活跃引擎继续运行
+                if (!scanEngines.zxing.active || activeEngine !== 'zxing') {
+                    return;
+                }
+                
+                // 性能优化：节流扫描
+                const now = Date.now();
+                if (now - lastScanTime < SCAN_THROTTLE * 2) {
+                    return;
+                }
+                
+                if (scanVideo.readyState === scanVideo.HAVE_ENOUGH_DATA) {
+                    try {
+                        // 捕获当前视频帧
+                        scanCanvas.width = scanVideo.videoWidth;
+                        scanCanvas.height = scanVideo.videoHeight;
+                        scanContext.drawImage(scanVideo, 0, 0, scanCanvas.width, scanCanvas.height);
+                        
+                        // 使用Zxing分析图片
+                        const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(scanCanvas);
+                        const binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+                        const multiFormatReader = new ZXing.MultiFormatReader();
+                        
+                        try {
+                            const result = multiFormatReader.decode(binaryBitmap);
+                            if (result) {
+                                lastScanTime = now;
+                                const format = detectBarcodeFormat(result.text);
+                                console.log('Zxing 识别成功:', result.text, format);
+                                handleScanResult(result.text, 'Zxing', format);
+                            }
+                        } catch (err) {
+                            // 静默处理未找到码的情况
+                        }
+                        
+                    } catch (error) {
+                        // 静默处理错误
+                    }
+                }
+            }, 800); // 增加间隔到800ms
+            
+            showToast('Zxing 扫描已启动', 'success');
+        }
+        
+        // 原生API扫描 - 优化版本
+        async function startNativeScanning() {
+            // 防止重复启动
+            if (scanEngines.native.active) {
+                console.log('原生API 已在运行中');
+                return;
+            }
+            
+            if (!('BarcodeDetector' in window)) {
+                showToast('浏览器不支持原生BarcodeDetector API', 'error');
+                changeScanMethod('jsqr');
+                return;
+            }
+            
+            console.log('启动原生API扫描');
+            
+            // 停止其他引擎
+            stopAllEnginesExcept('native');
+            
+            // 确保视频元素可见
+            scanVideo.style.display = 'block';
+            
+            // 标记引擎为活跃状态
+            scanEngines.native.active = true;
+            activeEngine = 'native';
+            
+            let animationId = null;
+            
+            // 定义停止函数
+            scanEngines.native.stopFunction = function() {
+                scanEngines.native.active = false;
+                if (activeEngine === 'native') {
+                    activeEngine = null;
+                }
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+                console.log('原生API 已停止');
+                return Promise.resolve();
+            };
+            
+            try {
+                // 根据条形码模式选择支持的格式
+                const formats = barcodeMode ? 
+                    ['code_128', 'ean_13', 'ean_8', 'code_39', 'upc_a', 'upc_e', 'itf', 'codabar'] :
+                    ['qr_code', 'code_128', 'ean_13', 'ean_8', 'code_39', 'upc_a', 'upc_e'];
+                
+                const barcodeDetector = new BarcodeDetector({ formats });
+                
+                async function detect() {
+                    // 确保只有当前活跃引擎继续运行
+                    if (!scanEngines.native.active || activeEngine !== 'native') {
+                        return;
+                    }
+                    
+                    // 性能优化：节流扫描
+                    const now = Date.now();
+                    if (now - lastScanTime < SCAN_THROTTLE) {
+                        animationId = requestAnimationFrame(detect);
+                        return;
+                    }
+                    
+                    try {
+                        const barcodes = await barcodeDetector.detect(scanVideo);
+                        if (barcodes.length > 0) {
+                            lastScanTime = now;
+                            const format = barcodes[0].format || detectBarcodeFormat(barcodes[0].rawValue);
+                            handleScanResult(barcodes[0].rawValue, 'Native API', format);
+                            // 在批量扫描模式下不停止扫描
+                            if (!batchScanning) {
+                                return;
+                            }
+                        }
+                    } catch (error) {
+                        if (scanEngines.native.active) {
+                            console.error('原生API检测错误:', error);
+                        }
+                    }
+                    
+                    animationId = requestAnimationFrame(detect);
+                }
+                
+                detect();
+                showToast('原生API 扫描已启动', 'success');
+            } catch (error) {
+                console.error('原生API启动失败:', error);
+                
+                // 重置状态
+                scanEngines.native.active = false;
+                if (activeEngine === 'native') {
+                    activeEngine = null;
+                }
+                
+                showToast('原生API启动失败，切换到Zxing', 'error');
+                changeScanMethod('zxing');
+            }
+        }
+        
+        // 切换扫描方法
+        function changeScanMethod(method) {
+            // 防止切换到相同方法
+            if (currentScanMethod === method) {
+                console.log('已经是当前扫描方法:', method);
+                return;
+            }
+            
+            console.log('切换扫描方法从', currentScanMethod, '到', method);
+            currentScanMethod = method;
+            
+            // 更新UI
+            document.querySelectorAll('.scan-method-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            const targetOption = document.querySelector(`input[value="${method}"]`);
+            if (targetOption) {
+                targetOption.parentElement.classList.add('active');
+            }
+            
+            // 停止当前扫描
+            stopCurrentScanning();
+            
+            // 显示切换提示
+            const methodNames = {
+                'jsqr': 'jsQR',
+                'zxing': 'Zxing',
+                'native': '原生API'
+            };
+            
+            showToast(`正在切换到 ${methodNames[method]} 扫描引擎...`, 'success');
+            
+            // 重新开始扫描
+            if (scanning) {
+                // 使用更短的延迟，因为我们已经有了更好的引擎管理
+                setTimeout(() => {
+                    startScanning();
+                }, 200);
+            }
+        }
+        
+        // 停止当前扫描
+        function stopCurrentScanning() {
+            console.log('停止当前扫描，方法:', currentScanMethod);
+            
+            // 停止指定的引擎
+            if (currentScanMethod && scanEngines[currentScanMethod] && scanEngines[currentScanMethod].active) {
+                if (scanEngines[currentScanMethod].stopFunction) {
+                    scanEngines[currentScanMethod].stopFunction();
+                }
+            }
+            
+            // 恢复UI状态
+            scanVideo.style.display = 'block';
+        }
+        
+        // 翻转摄像头
+        async function flipCamera() {
+            currentCamera = currentCamera === 'environment' ? 'user' : 'environment';
+            
+            try {
+                // 停止当前扫描
+                stopCurrentScanning();
+                
+                // 启动新的摄像头
+                await startCamera(currentCamera);
+                
+                // 根据摄像头类型设置默认镜像状态
+                if (currentCamera === 'user') {
+                    // 前置摄像头默认开启镜像
+                    mirrorState = true;
+                    scanVideo.style.transform = 'scaleX(-1)';
+                    showToast(`已切换到前置摄像头（默认镜像）`, 'success');
+                } else {
+                    // 后置摄像头默认关闭镜像
+                    mirrorState = false;
+                    scanVideo.style.transform = 'scaleX(1)';
+                    showToast(`已切换到后置摄像头（默认不镜像）`, 'success');
+                }
+            } catch (error) {
+                console.error('翻转摄像头失败:', error);
+                showToast('翻转摄像头失败', 'error');
+            }
+        }
+        
+        // 切换闪光灯
+        async function toggleFlash() {
+            try {
+                const track = scanVideo.srcObject.getVideoTracks()[0];
+                const capabilities = track.getCapabilities();
+                
+                if (capabilities.torch) {
+                    const currentTorch = track.getSettings().torch;
+                    await track.applyConstraints({
+                        advanced: [{ torch: !currentTorch }]
+                    });
+                    flashState = !flashState;
+                    showToast(flashState ? '闪光灯已开启' : '闪光灯已关闭', 'success');
+                } else {
+                    showToast('设备不支持闪光灯', 'error');
+                }
+            } catch (error) {
+                console.error('切换闪光灯失败:', error);
+                showToast('切换闪光灯失败', 'error');
+            }
+        }
+        
+        // 切换镜像翻转
+        function toggleMirror() {
+            mirrorState = !mirrorState;
+            if (mirrorState) {
+                scanVideo.style.transform = 'scaleX(-1)';
+                showToast('镜像已开启', 'success');
+            } else {
+                scanVideo.style.transform = 'scaleX(1)';
+                showToast('镜像已关闭', 'success');
+            }
+        }
+        
+        // 切换条形码模式
+        function toggleBarcodeMode() {
+            barcodeMode = !barcodeMode;
+            const btn = document.getElementById('barcode-mode-btn');
+            const title = document.getElementById('scan-title');
+            const tips = document.getElementById('scan-tips');
+            
+            if (barcodeMode) {
+                btn.classList.add('active');
+                title.textContent = '全屏条形码扫描';
+                tips.textContent = '条形码扫描模式 - 将条形码对准屏幕任意位置';
+                showToast('已切换到条形码模式', 'success');
+                
+                // 当前默认已经是原生API，无需切换
+            } else {
+                btn.classList.remove('active');
+                title.textContent = '全屏扫码';
+                tips.textContent = '全屏扫描模式 - 将二维码对准屏幕任意位置';
+                showToast('已切换到二维码模式', 'success');
+            }
+            
+            // 重新启动扫描以应用新模式
+            if (scanning) {
+                stopCurrentScanning();
+                setTimeout(() => {
+                    startScanning();
+                }, 200);
+            }
+        }
+        
+        // 开始批量扫描
+        function startBatchScan() {
+            batchScanning = true;
+            batchScanResults = [];
+            lastBatchScanTime = 0; // 重置最后扫描时间
+            
+            const btn = document.getElementById('batch-scan-btn');
+            const title = document.getElementById('scan-title');
+            const tips = document.getElementById('scan-tips');
+            
+            btn.classList.add('active');
+            title.textContent = '批量扫码模式';
+            tips.textContent = '批量扫码模式 - 连续扫描多个二维码/条形码，完成后点击停止按钮';
+            
+            showToast('批量扫描已开始，请连续扫描多个码', 'success');
+            
+            // 更新按钮功能为停止批量扫描
+            btn.setAttribute('onclick', 'stopBatchScan()');
+            btn.title = '停止批量扫描';
+            
+            // 重新启动扫描以应用批量模式
+            if (scanning) {
+                stopCurrentScanning();
+                setTimeout(() => {
+                    startScanning();
+                }, 200);
+            }
+        }
+        
+        // 停止批量扫描
+        function stopBatchScan() {
+            batchScanning = false;
+            
+            const btn = document.getElementById('batch-scan-btn');
+            const title = document.getElementById('scan-title');
+            const tips = document.getElementById('scan-tips');
+            
+            btn.classList.remove('active');
+            title.textContent = '全屏扫码';
+            tips.textContent = '全屏扫描模式 - 将二维码对准屏幕任意位置';
+            
+            // 恢复按钮功能为开始批量扫描
+            btn.setAttribute('onclick', 'startBatchScan()');
+            btn.title = '批量识别';
+            
+            // 处理批量扫描结果
+            if (batchScanResults.length > 0) {
+                // 去重
+                const uniqueResults = [...new Set(batchScanResults)];
+                
+                // 生成结果文本
+                const batchResultText = `批量扫描结果 (${uniqueResults.length}个):\n\n${uniqueResults.join('\n\n')}`;
+                
+                // 显示结果
+                closeScanModal();
+                displayResult(batchResultText, '批量扫描');
+                
+                showToast(`批量扫描完成，共识别 ${uniqueResults.length} 个码`, 'success');
+            } else {
+                showToast('批量扫描已停止，未识别到任何码', 'error');
+            }
+            
+            // 清空批量扫描结果
+            batchScanResults = [];
+        }
+        
+        // 测试所有扫描引擎
+        async function testScanEngines() {
+            const engines = ['jsqr', 'zxing', 'native'];
+            const results = [];
+            
+            showToast('开始测试所有扫描引擎...', 'success');
+            
+            for (const engine of engines) {
+                try {
+                    console.log(`测试 ${engine} 引擎...`);
+                    changeScanMethod(engine);
+                    
+                    // 等待一段时间让引擎初始化
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    results.push(`${engine}: ✅ 初始化成功`);
+                } catch (error) {
+                    console.error(`${engine} 测试失败:`, error);
+                    results.push(`${engine}: ❌ 初始化失败 - ${error.message}`);
+                }
+            }
+            
+            // 显示测试结果
+            console.log('扫描引擎测试结果:', results);
+            showToast('测试完成，请查看控制台了解详情', 'success');
+            
+            // 恢复到原生API
+            changeScanMethod('native');
+        }
+        
+        // 关闭扫描模态框
+        function closeScanModal() {
+            const modal = document.getElementById('scan-modal');
+            modal.classList.remove('active');
+            
+            // 停止所有引擎
+            Object.keys(scanEngines).forEach(engine => {
+                if (scanEngines[engine].active && scanEngines[engine].stopFunction) {
+                    scanEngines[engine].stopFunction();
+                }
+            });
+            
+            // 重置活跃引擎
+            activeEngine = null;
+            
+            // 停止视频流
+            if (scanVideo.srcObject) {
+                scanVideo.srcObject.getTracks().forEach(track => track.stop());
+                scanVideo.srcObject = null;
+            }
+            
+            // 确保视频元素可见
+            scanVideo.style.display = 'block';
+            
+            // 重置UI状态
+            document.getElementById('permission-area').style.display = 'none';
+            document.getElementById('scan-tips').style.display = 'block';
+            
+            // 重置批量扫描状态
+            if (batchScanning) {
+                batchScanning = false;
+                batchScanResults = [];
+                
+                const btn = document.getElementById('batch-scan-btn');
+                btn.classList.remove('active');
+                btn.setAttribute('onclick', 'startBatchScan()');
+                btn.title = '批量识别';
+                
+                const title = document.getElementById('scan-title');
+                const tips = document.getElementById('scan-tips');
+                title.textContent = '全屏扫码';
+                tips.textContent = '全屏扫描模式 - 将二维码对准屏幕任意位置';
+            }
+            
+            // 重置状态变量
+            scanning = false;
+            
+            console.log('扫描模态框已关闭，所有资源已清理');
+        }
+        
+        // 处理扫描结果
+        function handleScanResult(data, method = '', format = '') {
+            currentFormat = format || detectBarcodeFormat(data);
+            const isBarcode = currentFormat !== 'QR Code';
+            
+            // 批量扫描模式处理
+            if (batchScanning) {
+                const now = Date.now();
+                
+                // 防抖机制：防止短时间内重复扫描
+                if (now - lastBatchScanTime < BATCH_SCAN_COOLDOWN) {
+                    return; // 在冷却时间内，忽略扫描结果
+                }
+                
+                // 检查是否已经扫描过这个码
+                if (!batchScanResults.includes(data)) {
+                    batchScanResults.push(data);
+                    lastBatchScanTime = now; // 更新最后扫描时间
+                    showToast(`已添加第 ${batchScanResults.length} 个码 (${method})`, 'success');
+                    
+                    // 振动反馈（如果支持）
+                    if (navigator.vibrate) {
+                        navigator.vibrate(200);
+                    }
+                } else {
+                    showToast('这个码已经扫描过了', 'error');
+                    
+                    // 振动反馈（如果支持）
+                    if (navigator.vibrate) {
+                        navigator.vibrate([100, 50, 100]);
+                    }
+                }
+                
+                // 继续扫描，不关闭模态框
+                return;
+            }
+            
+            // 普通扫描模式处理
+            showToast(`扫描成功！(${method})`, 'success');
+            
+            // 在关闭模态框前捕获当前视频帧作为预览
+            let previewImageSrc = null;
+            if (scanVideo.readyState === scanVideo.HAVE_ENOUGH_DATA) {
+                const previewCanvas = document.createElement('canvas');
+                const previewContext = previewCanvas.getContext('2d');
+                
+                // 使用适合预览区的尺寸，保持视频的宽高比
+                const maxWidth = 160;
+                const maxHeight = 160;
+                const videoWidth = scanVideo.videoWidth;
+                const videoHeight = scanVideo.videoHeight;
+                
+                let width = videoWidth;
+                let height = videoHeight;
+                
+                // 计算缩放比例
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width *= ratio;
+                    height *= ratio;
+                }
+                
+                previewCanvas.width = width;
+                previewCanvas.height = height;
+                
+                // 根据镜像状态调整绘制
+                if (mirrorState) {
+                    previewContext.scale(-1, 1);
+                    previewContext.drawImage(scanVideo, -width, 0, width, height);
+                } else {
+                    previewContext.drawImage(scanVideo, 0, 0, width, height);
+                }
+                
+                previewImageSrc = previewCanvas.toDataURL('image/jpeg', 0.9);
+            }
+            
+            closeScanModal();
+            
+            // 显示扫描预览
+            displayScanPreview(previewImageSrc);
+            
+            // 显示结果
+            displayResult(data, currentFormat);
+        }
+        
+        // 显示扫描预览
+        function displayScanPreview(imageSrc = null) {
+            const previewContent = document.getElementById('preview-content');
+            
+            if (imageSrc) {
+                previewContent.innerHTML = `
+                    <div class="image-preview" style="position: relative; z-index: 1;">
+                        <img src="${imageSrc}" class="preview-image" alt="扫描预览" style="cursor: pointer; position: relative; z-index: 1;" onclick="reanalyzePreviewImage('${imageSrc}')" title="点击图片重识别">
+                        <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; pointer-events: none; display: flex; align-items: center; gap: 6px; white-space: nowrap; z-index: 2;" class="preview-hint">
+                            📷 点击图片重识别
+                        </div>
+                    </div>
+                `;
+            } else {
+                previewContent.innerHTML = `
+                    <div class="scan-preview">
+                        <div class="preview-icon">📷</div>
+                        <p>预览区</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // 打开上传模态框
+        function openUploadModal(type) {
+            currentUploadType = type;
+            const modal = document.getElementById('upload-modal');
+            const title = document.getElementById('upload-title');
+            const uploadArea = document.getElementById('upload-area');
+            const uploadIcon = uploadArea.querySelector('.upload-icon');
+            
+            title.textContent = type === 'file' ? '上传文件' : '上传图片';
+            uploadIcon.textContent = type === 'file' ? '📁' : '🖼️';
+            
+            resetUpload();
+            modal.classList.add('active');
+        }
+        
+        // 关闭上传模态框
+        function closeUploadModal() {
+            const modal = document.getElementById('upload-modal');
+            modal.classList.remove('active');
+            resetUpload();
+            clearExternalPreview();
+        }
+        
+        // 清除外部预览
+        function clearExternalPreview() {
+            const previewContent = document.getElementById('preview-content');
+            previewContent.innerHTML = `
+                <div class="preview-placeholder">
+                    <div class="preview-icon">📷</div>
+                    <p>预览区</p>
+                </div>
+            `;
+        }
+        
+        // 设置拖拽上传
+        function setupDragAndDrop() {
+            const uploadArea = document.getElementById('upload-area');
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFile(files[0]);
+                }
+            });
+        }
+        
+        // 处理文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+        
+        // 处理文件
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showToast('请选择图片文件', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.getElementById('preview-image');
+                img.src = e.target.result;
+                
+                // 显示外部预览
+                displayExternalPreview(e.target.result, file.name);
+                
+                document.getElementById('upload-area').classList.add('hidden');
+                document.getElementById('preview-container').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // 显示外部预览
+        function displayExternalPreview(imageSrc, fileName) {
+            const previewContent = document.getElementById('preview-content');
+            previewContent.innerHTML = `
+                <div class="image-preview">
+                    <img src="${imageSrc}" class="preview-image" alt="预览图片">
+                </div>
+            `;
+        }
+        
+        // 分析图片（使用所有可用的库）
+        async function analyzeImage() {
+            const img = document.getElementById('preview-image');
+            
+            // 创建临时canvas来处理图片
+            const tempCanvas = document.createElement('canvas');
+            const tempContext = tempCanvas.getContext('2d');
+            
+            img.onload = async function() {
+                tempCanvas.width = img.naturalWidth;
+                tempCanvas.height = img.naturalHeight;
+                tempContext.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+                
+                const imageData = tempContext.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                
+                // 尝试所有可用的库
+                let result = null;
+                let method = '';
+                let format = '';
+                
+                // 1. 尝试jsQR
+                try {
+                    const jsqrResult = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "dontInvert",
+                    });
+                    if (jsqrResult) {
+                        result = jsqrResult.data;
+                        method = 'jsQR';
+                        format = detectBarcodeFormat(result);
+                    }
+                } catch (e) {
+                    console.error('jsQR分析失败:', e);
+                }
+                
+                // 2. 尝试Zxing
+                if (!result) {
+                    try {
+                        const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(tempCanvas);
+                        const binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+                        const multiFormatReader = new ZXing.MultiFormatReader();
+                        const zxingResult = multiFormatReader.decode(binaryBitmap);
+                        if (zxingResult) {
+                            result = zxingResult.getText();
+                            method = 'Zxing';
+                            format = detectBarcodeFormat(result);
+                        }
+                    } catch (e) {
+                        console.error('Zxing分析失败:', e);
+                    }
+                }
+                
+                // 3. 尝试原生API
+                if (!result && 'BarcodeDetector' in window) {
+                    try {
+                        const barcodeDetector = new BarcodeDetector({
+                            formats: ['qr_code', 'code_128', 'ean_13', 'ean_8', 'code_39', 'upc_a', 'upc_e']
+                        });
+                        const barcodes = await barcodeDetector.detect(tempCanvas);
+                        if (barcodes.length > 0) {
+                            result = barcodes[0].rawValue;
+                            method = 'Native API';
+                            format = barcodes[0].format || detectBarcodeFormat(result);
+                        }
+                    } catch (e) {
+                        console.error('原生API分析失败:', e);
+                    }
+                }
+                
+                if (result) {
+                    showToast(`识别成功！(${method})`, 'success');
+                    
+                    // 保存当前预览内容
+                    const currentPreview = document.getElementById('preview-content').innerHTML;
+                    
+                    closeUploadModal();
+                    
+                    // 恢复预览内容
+                    document.getElementById('preview-content').innerHTML = currentPreview;
+                    
+                    // 显示结果
+                    displayResult(result, format);
+                } else {
+                    showToast('未检测到二维码或条形码，请确保图片清晰且包含有效的码', 'error');
+                }
+            };
+            
+            // 如果图片已经加载完成，直接处理
+            if (img.complete) {
+                img.onload();
+            }
+        }
+        
+        // 重置上传
+        function resetUpload() {
+            document.getElementById('file-input').value = '';
+            document.getElementById('upload-area').classList.remove('hidden');
+            document.getElementById('preview-container').classList.add('hidden');
+        }
+        
+        // 复制到剪贴板
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('已复制到剪贴板', 'success');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    fallbackCopyToClipboard(text);
+                });
+            } else {
+                fallbackCopyToClipboard(text);
+            }
+        }
+        
+        // 备用复制方法
+        function fallbackCopyToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showToast('已复制到剪贴板', 'success');
+            } catch (err) {
+                console.error('复制失败:', err);
+                showToast('复制失败，请手动复制', 'error');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+        
+        // 显示Toast提示
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            
+            // 根据类型添加图标
+            let icon = '';
+            switch(type) {
+                case 'success':
+                    icon = '🌟 ';
+                    break;
+                case 'error':
+                    icon = '⚠️ ';
+                    break;
+                default:
+                    icon = '💡 ';
+            }
+            
+            toast.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;">${icon}${message}</span>`;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 显示识别结果
+        function displayResult(result, format = '') {
+            if (!result) return;
+            
+            // 保存当前结果到撤销栈
+            if (currentResult) {
+                undoStack.push(currentResult);
+            }
+            
+            // 累加结果而不是覆盖
+            if (currentResult) {
+                currentResult = currentResult + '\n\n' + result;
+            } else {
+                currentResult = result;
+            }
+            redoStack = []; // 清空重做栈
+            
+            // 更新结果显示
+            const resultContent = document.getElementById('result-content');
+            resultContent.innerHTML = `<div class="result-text">${escapeHtml(currentResult)}</div>`;
+            
+            // 显示格式标签
+            if (format) {
+                const formatBadge = document.getElementById('result-format');
+                formatBadge.textContent = format;
+                formatBadge.style.display = 'inline-block';
+                
+                // 根据格式设置样式
+                if (format === 'QR Code') {
+                    formatBadge.className = 'format-badge qrcode';
+                } else {
+                    formatBadge.className = 'format-badge barcode';
+                }
+            }
+            
+            // 添加到历史记录
+            addToHistory(result, format);
+            
+            // 保存历史到本地存储
+            saveHistory();
+        }
+        
+        // 清除结果
+        function clearResult() {
+            if (currentResult) {
+                undoStack.push(currentResult);
+            }
+            
+            currentResult = '';
+            redoStack = [];
+            currentFormat = '';
+            
+            const resultContent = document.getElementById('result-content');
+            resultContent.innerHTML = '<p class="result-placeholder">暂无识别结果</p>';
+            
+            // 隐藏格式标签
+            const formatBadge = document.getElementById('result-format');
+            formatBadge.style.display = 'none';
+            
+            showToast('已清除结果', 'success');
+        }
+        
+        // 撤销
+        function undoResult() {
+            if (undoStack.length === 0) {
+                showToast('没有可撤销的操作', 'error');
+                return;
+            }
+            
+            redoStack.push(currentResult);
+            currentResult = undoStack.pop();
+            
+            const resultContent = document.getElementById('result-content');
+            if (currentResult) {
+                resultContent.innerHTML = `<div class="result-text">${escapeHtml(currentResult)}</div>`;
+            } else {
+                resultContent.innerHTML = '<p class="result-placeholder">暂无识别结果</p>';
+            }
+            
+            showToast('已撤销', 'success');
+        }
+        
+        // 反撤销
+        function redoResult() {
+            if (redoStack.length === 0) {
+                showToast('没有可重做的操作', 'error');
+                return;
+            }
+            
+            undoStack.push(currentResult);
+            currentResult = redoStack.pop();
+            
+            const resultContent = document.getElementById('result-content');
+            resultContent.innerHTML = `<div class="result-text">${escapeHtml(currentResult)}</div>`;
+            
+            showToast('已重做', 'success');
+        }
+        
+        // 复制结果
+        function copyResult() {
+            if (!currentResult) {
+                showToast('没有可复制的内容', 'error');
+                return;
+            }
+            
+            copyToClipboard(currentResult);
+        }
+        
+        // 添加到历史记录
+        function addToHistory(result, format = '') {
+            const historyItem = {
+                text: result,
+                format: format,
+                time: new Date().toLocaleString()
+            };
+            
+            resultHistory.unshift(historyItem);
+            
+            // 限制历史记录数量
+            if (resultHistory.length > 50) {
+                resultHistory = resultHistory.slice(0, 50);
+            }
+            
+            updateHistoryDisplay();
+        }
+        
+        // 更新历史显示
+        function updateHistoryDisplay() {
+            const historyContent = document.getElementById('history-content');
+            
+            if (resultHistory.length === 0) {
+                historyContent.innerHTML = '<p class="history-placeholder">暂无识别历史</p>';
+                return;
+            }
+            
+            let historyHTML = '';
+            resultHistory.forEach((item, index) => {
+                const formatBadge = item.format ? 
+                    `<span class="format-badge ${item.format === 'QR Code' ? 'qrcode' : 'barcode'}">${item.format}</span>` : '';
+                
+                historyHTML += `
+                    <div class="history-item">
+                        <div class="history-header" onclick="toggleHistoryItem(${index})">
+                            <span class="history-toggle">></span>
+                            <div class="history-preview">${escapeHtml(item.text.substring(0, 50))}${item.text.length > 50 ? '...' : ''}${formatBadge}</div>
+                            <div class="history-time">${item.time}</div>
+                        </div>
+                        <div class="history-content-detail" id="history-detail-${index}">
+                            <div class="history-full-text">${escapeHtml(item.text)}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            historyContent.innerHTML = historyHTML;
+        }
+        
+        // 切换历史记录展开/关闭
+        function toggleHistoryItem(index) {
+            const detailElement = document.getElementById(`history-detail-${index}`);
+            const toggleElement = detailElement.previousElementSibling.querySelector('.history-toggle');
+            
+            if (detailElement.style.display === 'block') {
+                detailElement.style.display = 'none';
+                toggleElement.textContent = '>';
+                toggleElement.style.transform = 'rotate(0deg)';
+            } else {
+                detailElement.style.display = 'block';
+                toggleElement.textContent = '>';
+                toggleElement.style.transform = 'rotate(90deg)';
+            }
+        }
+        
+        // 保存历史到本地存储
+        function saveHistory() {
+            try {
+                localStorage.setItem('qr_history', JSON.stringify(resultHistory));
+            } catch (e) {
+                console.error('保存历史失败:', e);
+            }
+        }
+        
+        // 清除历史记录
+        function clearHistory() {
+            if (resultHistory.length === 0) {
+                showToast('没有可清除的历史记录', 'error');
+                return;
+            }
+            
+            if (confirm('确定要清除所有历史记录吗？')) {
+                resultHistory = [];
+                updateHistoryDisplay();
+                saveHistory();
+                showToast('历史记录已清除', 'success');
+            }
+        }
+        
+        // 加载历史记录
+        function loadHistory() {
+            try {
+                const saved = localStorage.getItem('qr_history');
+                if (saved) {
+                    resultHistory = JSON.parse(saved);
+                    updateHistoryDisplay();
+                }
+            } catch (e) {
+                console.error('加载历史失败:', e);
+            }
+        }
+        
+        // HTML转义
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+        
+        // 从扫描模态框选择图片
+        function selectImageFromScan() {
+            document.getElementById('scan-image-input').click();
+        }
+        
+        // 从扫描模态框选择文件
+        function selectFileFromScan() {
+            document.getElementById('scan-file-input').click();
+        }
+        
+        // 处理扫描模态框内的图片选择
+        function handleScanImageSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                processSelectedFile(file, '图片');
+            }
+        }
+        
+        // 处理扫描模态框内的文件选择
+        function handleScanFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                processSelectedFile(file, '文件');
+            }
+        }
+        
+        // 处理选择的文件
+        async function processSelectedFile(file, sourceType) {
+            if (!file.type.startsWith('image/')) {
+                showToast('请选择图片文件', 'error');
+                return;
+            }
+            
+            showToast(`正在分析${sourceType}...`, 'success');
+            
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const imageSrc = e.target.result; // 保存图片数据URL
+                
+                // 创建临时图像元素
+                const img = new Image();
+                img.onload = async function() {
+                    // 创建临时canvas来处理图片
+                    const tempCanvas = document.createElement('canvas');
+                    const tempContext = tempCanvas.getContext('2d');
+                    
+                    tempCanvas.width = img.naturalWidth;
+                    tempCanvas.height = img.naturalHeight;
+                    tempContext.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+                    
+                    const imageData = tempContext.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                    
+                    // 尝试所有可用的库进行识别
+                    let result = null;
+                    let method = '';
+                    let format = '';
+                    
+                    // 1. 尝试当前选中的扫描方法
+                    switch (currentScanMethod) {
+                        case 'jsqr':
+                            try {
+                                const jsqrResult = jsQR(imageData.data, imageData.width, imageData.height, {
+                                    inversionAttempts: "dontInvert",
+                                });
+                                if (jsqrResult) {
+                                    result = jsqrResult.data;
+                                    method = 'jsQR';
+                                    format = detectBarcodeFormat(result);
+                                }
+                            } catch (e) {
+                                console.error('jsQR分析失败:', e);
+                            }
+                            break;
+                            
+                        case 'zxing':
+                            try {
+                                const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(tempCanvas);
+                                const binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+                                const multiFormatReader = new ZXing.MultiFormatReader();
+                                const zxingResult = multiFormatReader.decode(binaryBitmap);
+                                if (zxingResult) {
+                                    result = zxingResult.getText();
+                                    method = 'Zxing';
+                                    format = detectBarcodeFormat(result);
+                                }
+                            } catch (e) {
+                                console.error('Zxing分析失败:', e);
+                            }
+                            break;
+                            
+                        case 'native':
+                            if ('BarcodeDetector' in window) {
+                                try {
+                                    const formats = barcodeMode ? 
+                                        ['code_128', 'ean_13', 'ean_8', 'code_39', 'upc_a', 'upc_e', 'itf', 'codabar'] :
+                                        ['qr_code', 'code_128', 'ean_13', 'ean_8', 'code_39', 'upc_a', 'upc_e'];
+                                    
+                                    const barcodeDetector = new BarcodeDetector({ formats });
+                                    const barcodes = await barcodeDetector.detect(tempCanvas);
+                                    if (barcodes.length > 0) {
+                                        result = barcodes[0].rawValue;
+                                        method = 'Native API';
+                                        format = barcodes[0].format || detectBarcodeFormat(result);
+                                    }
+                                } catch (e) {
+                                    console.error('原生API分析失败:', e);
+                                }
+                            }
+                            break;
+                    }
+                    
+                    // 如果当前方法失败，尝试其他方法
+                    if (!result) {
+                        // 尝试原生API
+                        if (!result && 'BarcodeDetector' in window && currentScanMethod !== 'native') {
+                            try {
+                                const formats = ['qr_code', 'code_128', 'ean_13', 'ean_8', 'code_39', 'upc_a', 'upc_e'];
+                                const barcodeDetector = new BarcodeDetector({ formats });
+                                const barcodes = await barcodeDetector.detect(tempCanvas);
+                                if (barcodes.length > 0) {
+                                    result = barcodes[0].rawValue;
+                                    method = 'Native API';
+                                    format = barcodes[0].format || detectBarcodeFormat(result);
+                                }
+                            } catch (e) {
+                                console.error('原生API分析失败:', e);
+                            }
+                        }
+                        
+                        // 尝试Zxing
+                        if (!result && currentScanMethod !== 'zxing') {
+                            try {
+                                const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(tempCanvas);
+                                const binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+                                const multiFormatReader = new ZXing.MultiFormatReader();
+                                const zxingResult = multiFormatReader.decode(binaryBitmap);
+                                if (zxingResult) {
+                                    result = zxingResult.getText();
+                                    method = 'Zxing';
+                                    format = detectBarcodeFormat(result);
+                                }
+                            } catch (e) {
+                                console.error('Zxing分析失败:', e);
+                            }
+                        }
+                        
+                        // 尝试jsQR
+                        if (!result && currentScanMethod !== 'jsqr') {
+                            try {
+                                const jsqrResult = jsQR(imageData.data, imageData.width, imageData.height, {
+                                    inversionAttempts: "dontInvert",
+                                });
+                                if (jsqrResult) {
+                                    result = jsqrResult.data;
+                                    method = 'jsQR';
+                                    format = detectBarcodeFormat(result);
+                                }
+                            } catch (e) {
+                                console.error('jsQR分析失败:', e);
+                            }
+                        }
+                    }
+                    
+                    if (result) {
+                        showToast(`${sourceType}识别成功！(${method})`, 'success');
+                        closeScanModal();
+                        
+                        // 显示选择的图片预览
+                        displayScanPreview(imageSrc);
+                        
+                        // 显示结果
+                        displayResult(result, format);
+                    } else {
+                        showToast(`${sourceType}中未检测到二维码或条形码，请确保图片清晰且包含有效的码`, 'error');
+                    }
+                };
+                
+                img.src = imageSrc;
+            };
+            
+            reader.readAsDataURL(file);
+            
+            // 清空文件输入框
+            event.target.value = '';
+        }
+        
+        // 重新识别预览图片
+        async function reanalyzePreviewImage(imageSrc) {
+            showToast('正在重新识别预览图片...', 'success');
+            
+            // 创建临时图像元素
+            const img = new Image();
+            img.onload = async function() {
+                // 创建临时canvas来处理图片
+                const tempCanvas = document.createElement('canvas');
+                const tempContext = tempCanvas.getContext('2d');
+                
+                tempCanvas.width = img.naturalWidth;
+                tempCanvas.height = img.naturalHeight;
+                tempContext.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+                
+                const imageData = tempContext.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                
+                // 尝试所有可用的库进行识别
+                let result = null;
+                let method = '';
+                let format = '';
+                
+                // 尝试原生API
+                if ('BarcodeDetector' in window) {
+                    try {
+                        const formats = ['qr_code', 'code_128', 'ean_13', 'ean_8', 'code_39', 'upc_a', 'upc_e'];
+                        const barcodeDetector = new BarcodeDetector({ formats });
+                        const barcodes = await barcodeDetector.detect(tempCanvas);
+                        if (barcodes.length > 0) {
+                            result = barcodes[0].rawValue;
+                            method = 'Native API';
+                            format = barcodes[0].format || detectBarcodeFormat(result);
+                        }
+                    } catch (e) {
+                        console.error('原生API分析失败:', e);
+                    }
+                }
+                
+                // 尝试Zxing
+                if (!result) {
+                    try {
+                        const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(tempCanvas);
+                        const binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+                        const multiFormatReader = new ZXing.MultiFormatReader();
+                        const zxingResult = multiFormatReader.decode(binaryBitmap);
+                        if (zxingResult) {
+                            result = zxingResult.getText();
+                            method = 'Zxing';
+                            format = detectBarcodeFormat(result);
+                        }
+                    } catch (e) {
+                        console.error('Zxing分析失败:', e);
+                    }
+                }
+                
+                // 尝试jsQR
+                if (!result) {
+                    try {
+                        const jsqrResult = jsQR(imageData.data, imageData.width, imageData.height, {
+                            inversionAttempts: "dontInvert",
+                        });
+                        if (jsqrResult) {
+                            result = jsqrResult.data;
+                            method = 'jsQR';
+                            format = detectBarcodeFormat(result);
+                        }
+                    } catch (e) {
+                        console.error('jsQR分析失败:', e);
+                    }
+                }
+                
+                if (result) {
+                    showToast(`重新识别成功！(${method})`, 'success');
+                    // 显示结果
+                    displayResult(result, format);
+                } else {
+                    showToast('预览图片中未检测到二维码或条形码', 'error');
+                }
+            };
+            
+            img.src = imageSrc;
+        }
+        
+        // 监听ESC键关闭模态框
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeScanModal();
+                closeUploadModal();
+            }
+        });
+    </script>
+</body>
+</html>

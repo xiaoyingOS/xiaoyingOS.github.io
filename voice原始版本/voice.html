@@ -1,0 +1,3730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <title>语音说话功能</title>
+    <style>
+        html {
+            font-family: 'Arial', sans-serif;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            color: #333;
+            min-height: 100vh;
+            box-sizing: border-box;
+            overflow: visible;
+        }
+        
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 10px;
+            background-color: #ffffff;
+            color: #333;
+            min-height: 100vh;
+            box-sizing: border-box;
+            overflow: visible;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            background-color: #f8f9fa;
+            color: transparent;
+            font-size: 16px;
+            resize: vertical;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 5;
+            line-height: 2.5;
+            letter-spacing: 15px;
+            font-family: inherit;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow: auto;
+        }
+        
+        .pinyin-container {
+            position: relative;
+            width: 100%;
+        }
+        
+        /* 拼音显示区域样式（叠加布局） */
+        #pinyin-display {
+            padding: 15px;
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            line-height: 2.5;
+            font-size: 16px;
+            color: #000;
+            font-family: inherit;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow: hidden;
+            /* 轻量级GPU加速 */
+            transform: translateZ(0);
+            will-change: contents;
+        }
+        
+        #pinyin-display ruby {
+            ruby-position: over;
+            margin: 0 3px;
+            /* 轻量级GPU加速 */
+            transform: translateZ(0);
+        }
+        
+        #pinyin-display rt {
+            font-size: 11px;
+            color: #000;
+            font-weight: 600;
+            user-select: text;
+            /* 轻量级GPU加速 */
+            transform: translateZ(0);
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: stretch;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            justify-content: center;
+            width: 100%;
+        }
+        
+        .voice-control-group {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+        }
+        
+        .voice-select-wrapper {
+                position: relative;
+                width: 100%;
+                max-width: 600px;
+            }
+        
+        select {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        select, input[type="range"] {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        
+        select {
+            flex: 1;
+        }
+        
+        .range-value {
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .speak-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .speak-btn:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .speak-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .stop-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        .stop-btn:hover {
+            background-color: #d32f2f;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .pause-btn {
+            background-color: #FF9800;
+            color: white;
+        }
+        
+        .pause-btn:hover {
+            background-color: #F57C00;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .pause-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        .undo-redo-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            white-space: nowrap;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .undo-redo-btn:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .undo-redo-btn:active {
+            transform: translateY(0);
+        }
+        
+        .undo-redo-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .redo-btn {
+            background-color: #2196F3;
+        }
+        
+        .redo-btn:hover {
+            background-color: #0b7dda;
+        }
+        
+        .undo-redo-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: -100%;
+            padding: 10px 15px;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 500;
+            z-index: 2000;
+            opacity: 0;
+            transition: all 0.4s ease-out;
+            border-radius: 8px;
+            box-shadow: -6px 6px 20px rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-width: 150px;
+            max-width: 250px;
+        }
+        
+        .toast.show {
+            right: 20px;
+            opacity: 1;
+            transition-delay: 0.1s;
+        }
+        
+        .toast.success {
+            background: linear-gradient(135deg, #00b894, #00cec9, #74b9ff);
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease infinite;
+        }
+        
+        .toast.error {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24, #feca57);
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease infinite;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+        
+        @keyframes blink {
+            0%, 50% {
+                opacity: 1;
+            }
+            51%, 100% {
+                opacity: 0;
+            }
+        }
+        
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        /* 手机端适配 */
+        @media (max-width: 767px) {
+            html, body {
+                padding: 5px;
+            }
+            
+            body {
+                padding: 5px 5px 20px 5px;
+            }
+            
+            textarea {
+                height: 120px;
+                font-size: 16px;
+                background-color: transparent;
+                color: transparent;
+            }
+            
+            #pinyin-display {
+                font-size: 16px;
+                line-height: 2.5;
+            }
+            
+            #pinyin-display .ruby-text {
+                font-size: 16px;
+                line-height: 2.5;
+            }
+            
+            #pinyin-display .ruby-text rt {
+                font-size: 14px;
+            }
+            
+            .preset-buttons {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .voice-control-group {
+                flex-direction: row;
+                align-items: center;
+                gap: 10px;
+                justify-content: flex-start;
+                width: 100%;
+            }
+            
+            .voice-select-wrapper {
+                flex: 1;
+                max-width: 300px;
+                position: relative;
+                display: flex;
+                align-items: center;
+            }
+            
+            .controls {
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 15px !important;
+                width: 100%;
+                max-width: 350px;
+                margin: 0 auto;
+            }
+            
+            .controls > div {
+                width: 100%;
+                max-width: 100%;
+                border-right: none !important;
+                padding-right: 0 !important;
+                padding-left: 0 !important;
+                margin: 0 auto;
+            }
+            
+            .controls > div:last-child {
+                margin-left: -80px;
+            }
+            
+            .control-group {
+                justify-content: center;
+                flex-direction: row;
+                align-items: center;
+                text-align: left;
+                gap: 2px;
+                width: 100%;
+            }
+            
+            .control-group label {
+                text-align: left;
+                min-width: 50px;
+            }
+            
+            .control-group input[type="range"] {
+                flex: 1;
+                max-width: 100px;
+            }
+            
+            .range-value {
+                min-width: 30px;
+                text-align: center;
+                font-size: 14px;
+                display: inline-block;
+                color: #333;
+                font-weight: bold;
+            }
+            
+            .control-group label {
+                text-align: left;
+            }
+            
+            .controls > div:first-child > .control-group > label {
+                margin-left: 30px;
+            }
+            
+            .segmentation-options {
+                align-items: flex-start;
+                width: 100%;
+                text-align: left;
+                margin-left: 30px;
+            }
+            
+            .controls > div:first-child > .control-group > label {
+                margin-left: 30px;
+            }
+            
+            .controls > div:last-child {
+                margin-left: -85px;
+            }
+            
+            /* 批量语音生成弹窗手机端样式优化 */
+            #batch-modal > div > div[style*="flex-direction: column"] > div[style*="display: flex"] {
+                gap: 2px !important;
+            }
+            
+            #batch-modal > div > div[style*="flex-direction: column"] label[style*="min-width"] {
+                min-width: auto !important;
+                margin-right: 0 !important;
+                margin-left: -15px !important;
+            }
+            
+            #batch-modal select {
+                flex: 1 !important;
+            }
+        }
+        
+        .preset-btn {
+            padding: 8px 12px;
+            background-color: #6c757d;
+            color: white;
+            border: 1px solid #5a6268;
+            font-size: 14px;
+        }
+        
+        .preset-btn:hover {
+            background-color: #5a6268;
+        }
+        
+        /* 自定义下拉框样式 */
+        .custom-select {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .select-trigger {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .select-trigger:hover {
+            border-color: #aaa;
+        }
+        
+        .select-trigger.active {
+            border-color: #4CAF50;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+        }
+        
+        .arrow {
+            transition: transform 0.3s ease;
+            font-size: 12px;
+        }
+        
+        .arrow.up {
+            transform: rotate(180deg);
+        }
+        
+        .select-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .select-options.show {
+            display: block;
+        }
+        
+        .select-option {
+            padding: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .select-option:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .select-option.selected {
+            background-color: #e6f7e6;
+            font-weight: bold;
+        }
+
+        /* 电脑端适配 */
+        @media (min-width: 768px) {
+            html {
+                background-color: #474747;
+            }
+            
+            body {
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 30px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+            
+            h1 {
+                font-size: 2.5em;
+            }
+            
+            textarea {
+                height: 180px;
+                font-size: 16px;
+                background-color: transparent;
+                color: transparent;
+            }
+            
+            #pinyin-display {
+                font-size: 16px;
+                line-height: 2.5;
+            }
+            
+            #pinyin-display .ruby-text {
+                font-size: 16px;
+                line-height: 2.5;
+            }
+            
+            #pinyin-display .ruby-text rt {
+                font-size: 14px;
+            }
+            
+            .control-group {
+                gap: 15px;
+            }
+            
+            .voice-control-group {
+                flex-direction: row;
+                align-items: center;
+                gap: 15px;
+            }
+            
+            .voice-select-wrapper {
+                position: relative;
+                overflow: visible;
+                width: 100%;
+                max-width: 600px;
+            }
+            
+            input[type="range"] {
+                padding: 10px;
+                font-size: 16px;
+            }
+            
+            button {
+                padding: 15px 30px;
+                font-size: 18px;
+            }
+            
+            .preset-btn {
+                padding: 12px 15px;
+                font-size: 16px;
+            }
+            
+            .status {
+                background-color: #f8f9fa;
+                color: #333;
+            }
+        }
+        
+                    /* 批量语音生成弹窗关闭按钮多彩雷达扫描特效 */
+                #batch-close-btn::before {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    border: 4px solid transparent;
+                    border-top-color: #FF6B6B;
+                    border-right-color: #4ECDC4;
+                    border-bottom-color: #45B7D1;
+                    border-left-color: #96CEB4;
+                    z-index: -1;
+                    animation: rainbowSpin 2s linear infinite;
+                    box-shadow: 0 0 20px rgba(78, 205, 196, 0.6), inset 0 0 20px rgba(78, 205, 196, 0.3);
+                }
+                
+                #batch-close-btn::after {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 35px;
+                    height: 35px;
+                    border-radius: 50%;
+                    border: 3px solid transparent;
+                    border-top-color: #FFE66D;
+                    border-right-color: #FF6B6B;
+                    border-bottom-color: #4ECDC4;
+                    border-left-color: #45B7D1;
+                    z-index: -1;
+                    animation: rainbowSpin 1.5s linear infinite reverse;
+                    box-shadow: 0 0 15px rgba(255, 230, 109, 0.5);
+                }
+                
+                @keyframes rainbowSpin {
+                    0% {
+                        transform: translate(-50%, -50%) rotate(0deg);
+                    }
+                    100% {
+                        transform: translate(-50%, -50%) rotate(360deg);
+                    }
+                }        
+        /* 拼音转换选项样式 */
+        .pinyin-options-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+        
+        .pinyin-options-row label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        
+        .pinyin-options-row input[type="radio"],
+        .pinyin-options-row input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        
+        
+    </style>
+</head>
+<body>
+    <h1>语音说话功能</h1>
+    
+    <!-- 拼音转换选项 -->
+    <div class="input-group">
+        <div class="pinyin-options-row">
+            <label><input type="radio" name="toneType" value="symbol" checked> 带声调符号</label>
+            <label><input type="radio" name="toneType" value="num"> 带声调数字</label>
+            <label><input type="radio" name="toneType" value="none"> 无声调</label>
+            <label><input type="checkbox" id="space" checked> 保留空格</label>
+            <label><input type="checkbox" id="firstLetter"> 仅首字母</label>
+        </div>
+    </div>
+        
+    <div class="input-group">
+        <label for="hanziInput">输入要转换的汉字：</label>
+        <div class="pinyin-container">
+            <div id="pinyin-display" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; padding: 15px; box-sizing: border-box; font-family: inherit; font-size: 16px; line-height: 2.5; white-space: pre-wrap; word-wrap: break-word; overflow: hidden; text-align: left;"></div>
+            <div id="virtual-cursor" style="position: absolute; top: 0; left: 0; width: 2px; height: 20px; background-color: #333; pointer-events: none; z-index: 3; display: none; animation: blink 1s infinite;"></div>
+            <textarea id="hanziInput" style="position: relative; z-index: 2; background-color: transparent;"></textarea>
+        </div>
+    </div>
+        
+    <div class="input-group">
+        <div style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; width: fit-content; margin: 0 auto;">
+            <label for="file-input" style="text-align: left; margin-bottom: 8px; display: block;">选择文本文件：</label>
+            <input type="file" id="file-input" accept=".txt" style="margin: 0 auto; display: block;" />
+        </div>
+    </div>
+        
+    <div class="undo-redo-container">
+        <button id="undo-btn" class="undo-redo-btn" disabled style="width: 100px;">↶ 撤销</button>
+        <button id="redo-btn" class="undo-redo-btn redo-btn" disabled style="width: 100px;">↷ 反撤销</button>
+        <button id="batch-generate-btn" class="undo-redo-btn" style="width: 120px;">📁核心音频下载</button>
+    </div>
+        
+    <!-- 语音模型列表 -->
+    <div class="control-group voice-control-group" style="flex-direction: row; align-items: center; justify-content: center; margin-bottom: 20px; gap: 15px;">
+        <label for="voice-select">语音模型列表：</label>
+        <div class="voice-select-wrapper" style="flex: 0 0 600px;">
+            <div id="custom-select" class="custom-select">
+                <div id="select-trigger" class="select-trigger">
+                    <span id="selected-voice">请选择语音模型</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div id="select-options" class="select-options">
+                    <div class="select-option" data-value="-1">正在加载语音模型...</div>
+                </div>
+            </div>
+            <select id="voice-select" style="display: none;"></select>
+        </div>
+    </div>
+
+    <div style="display: flex; justify-content: center; width: 100%;">
+        <div class="controls" style="display: flex !important; flex-direction: row !important; gap: 40px; align-items: flex-start; justify-content: center !important;">
+            <!-- 左侧：分段策略选择 -->
+            <div style="flex: 0 0 250px; border-right: 1px solid #ddd; padding-right: 30px;">
+                <!-- 分段策略选择 -->
+                <div class="control-group" style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px;">
+                    <label style="font-weight: bold;">分段策略：</label>
+                    <div class="segmentation-options" style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="font-weight: normal; display: flex; align-items: center;">
+                        <input type="radio" name="segmentation" value="weight" checked style="margin-right: 8px;">
+                        <span>智能权重评分</span>
+                    </label>
+                    <label style="font-weight: normal; display: flex; align-items: center;">
+                        <input type="radio" name="segmentation" value="prosody" style="margin-right: 8px;">
+                        <span>语音韵律分割</span>
+                    </label>
+                    <label style="font-weight: normal; display: flex; align-items: center;">
+                        <input type="radio" name="segmentation" value="adaptive" style="margin-right: 8px;">
+                        <span>混合自适应分段</span>
+                    </label>
+                    <label style="font-weight: normal; display: flex; align-items: center;">
+                        <input type="radio" name="segmentation" value="context" style="margin-right: 8px;">
+                        <span>实时感知分段</span>
+                    </label>
+                    <label style="font-weight: normal; display: flex; align-items: center;">
+                        <input type="radio" name="segmentation" value="semantic" style="margin-right: 8px;">
+                        <span>语义智能分段</span>
+                    </label>
+                    <label style="font-weight: normal; display: flex; align-items: center;">
+                        <input type="radio" name="segmentation" value="rhythm" style="margin-right: 8px;">
+                        <span>节奏模式分段</span>
+                    </label>
+                </div>
+                </div>
+            </div>
+            
+            <!-- 右侧：音量、语速、音调控制 -->
+            <div style="flex: 1; padding-left: 20px;">
+                <div class="control-group">
+                    <label for="pitch-range">音调：</label>
+                    <input type="range" id="pitch-range" min="0.1" max="3" value="1" step="0.1" oninput="document.getElementById('pitch-value').textContent = this.value;">
+                    <span class="range-value" id="pitch-value">1</span>
+                </div>
+                
+                <div class="control-group">
+                    <label for="rate-range">语速：</label>
+                    <input type="range" id="rate-range" min="0.1" max="3" value="1" step="0.1" oninput="document.getElementById('rate-value').textContent = this.value;">
+                    <span class="range-value" id="rate-value">1</span>
+                </div>
+                
+                <div class="control-group">
+                    <label for="volume-range">音量：</label>
+                    <input type="range" id="volume-range" min="0.1" max="3" value="1" step="0.1" oninput="document.getElementById('volume-value').textContent = this.value;">
+                    <span class="range-value" id="volume-value">1</span>
+                </div>
+                <div style="text-align: left; font-size: 14px; color: #666; margin-top: 5px;">
+                    有效值：音调 0.1-2、语速 0.1-3、音量 0.1-2
+                </div>
+            </div>
+        </div>
+    </div>
+        
+    <div class="button-group">
+        <button id="speak-btn" class="speak-btn">开始朗读</button>
+        <button id="pause-btn" class="pause-btn" disabled>暂停</button>
+        <button id="stop-btn" class="stop-btn">停止朗读</button>
+    </div>
+        
+    <div id="status" class="status">准备就绪</div>
+    
+    <!-- Toast 提示 -->
+    <div id="toast" class="toast"></div>
+    
+    <!-- 批量语音生成弹窗 -->
+    <div id="batch-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 3000; justify-content: center; align-items: center;">
+        <div style="background-color: #fff; border-radius: 12px; padding: 30px; max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: 0; background-color: #fff; padding-bottom: 10px; z-index: 10;">
+                <h2 style="margin: 0; font-size: 24px; color: #333;">批量语音生成</h2>
+                <button id="batch-close-btn" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #666; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; position: relative; z-index: 10;">×</button>
+            </div>
+            
+            <div class="input-group" style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: bold;">输入文本：</label>
+                <textarea id="batch-text-input" placeholder="在这里输入要合成的文本..." style="width: 100%; height: 200px; padding: 15px; border-radius: 10px; border: 1px solid #ddd; background-color: #f8f9fa; color: #333; font-size: 16px; resize: vertical; box-sizing: border-box; letter-spacing: 2px; word-spacing: 5px; line-height: normal;"></textarea>
+            </div>
+            
+            <div class="input-group" style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: bold;">选择文本文件：</label>
+                <input type="file" id="batch-file-input" accept=".txt" style="margin: 0 auto; display: block;" />
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="font-weight: bold; min-width: 100px;">语音模型：</label>
+                    <select id="batch-voice-select" style="flex: 1; padding: 8px; border-radius: 5px; border: 1px solid #ddd; background-color: #f8f9fa;">
+    <!-- Edge-TTS 高质量语音模型 -->
+    <optgroup label="🎙️ Edge-TTS 高质量语音（推荐）">
+        <option value="zh-CN-XiaoxiaoNeural" selected>晓晓 - 大陆女声（温柔温暖）</option>
+        <option value="zh-CN-XiaoyiNeural">晓依 - 大陆女声（活泼可爱）</option>
+        <option value="zh-CN-YunjianNeural">云健 - 大陆男声（激情澎湃）</option>
+        <option value="zh-CN-YunxiNeural">云希 - 大陆男声（阳光活力）</option>
+        <option value="zh-CN-YunxiaNeural">云夏 - 大陆男声（可爱亲切）</option>
+        <option value="zh-CN-YunyangNeural">云扬 - 大陆男声（专业可靠）</option>
+    </optgroup>
+    
+    <optgroup label="🌏 Edge-TTS 方言语音">
+        <option value="zh-CN-liaoning-XiaobeiNeural">小贝 - 东北话（幽默风趣）</option>
+        <option value="zh-CN-shaanxi-XiaoniNeural">小妮 - 陕西话（明快亮丽）</option>
+    </optgroup>
+    
+    <optgroup label="🇹🇼 Edge-TTS 台湾语音">
+        <option value="zh-TW-HsiaoChenNeural">晓甄 - 台湾女声（友好亲切）</option>
+        <option value="zh-TW-HsiaoYuNeural">晓雨 - 台湾女声（自然流畅）</option>
+        <option value="zh-TW-YunJheNeural">云哲 - 台湾男声（友好亲切）</option>
+    </optgroup>
+    
+    <optgroup label="🇭🇰 Edge-TTS 粤语语音">
+        <option value="zh-HK-HiuGaaiNeural">曉佳 - 香港女声（友好亲切）</option>
+        <option value="zh-HK-HiuMaanNeural">曉文 - 香港女声（友好亲切）</option>
+        <option value="zh-HK-WanLungNeural">云龍 - 香港男声（友好亲切）</option>
+    </optgroup>
+</select>
+                    <button id="preview-btn" style="padding: 8px 15px; border: none; border-radius: 5px; background-color: #4CAF50; color: white; cursor: pointer; white-space: nowrap;">🔊 试听</button>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="font-weight: bold; min-width: 100px;">分段策略：</label>
+                    <select id="batch-segmentation-select" style="flex: 1; padding: 8px; border-radius: 5px; border: 1px solid #ddd; background-color: #f8f9fa;">
+                        <option value="weight">智能权重评分</option>
+                        <option value="prosody">语音韵律分割</option>
+                        <option value="adaptive">混合自适应分段</option>
+                        <option value="context">实时感知分段</option>
+                        <option value="semantic">语义智能分段</option>
+                        <option value="rhythm">节奏模式分段</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="font-weight: bold; min-width: 100px;">音调：</label>
+                    <input type="range" id="batch-pitch-range" min="0.1" max="2" value="1" step="0.1" style="flex: 1;">
+                    <span id="batch-pitch-value" class="range-value">1</span>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="font-weight: bold; min-width: 100px;">语速：</label>
+                    <input type="range" id="batch-rate-range" min="0.1" max="3" value="1" step="0.1" style="flex: 1;">
+                    <span id="batch-rate-value" class="range-value">1</span>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="font-weight: bold; min-width: 100px;">音量：</label>
+                    <input type="range" id="batch-volume-range" min="0.1" max="2" value="1" step="0.1" style="flex: 1;">
+                    <span id="batch-volume-value" class="range-value">1</span>
+                </div>
+            </div>
+            
+            <div id="batch-status" style="text-align: center; margin-bottom: 20px; padding: 10px; border-radius: 8px; background-color: #f8f9fa; color: #333; border: 1px solid #ddd;">
+                准备就绪
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="batch-synthesize-btn" style="flex: 1; padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; background-color: #4CAF50; color: white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">🎵 本地部署</button>
+                <button id="batch-export-btn" style="flex: 1; padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; background-color: #FF9800; color: white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">📝 导出配置</button>
+                <button id="batch-download-btn" style="flex: 1; padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; background-color: #2196F3; color: white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">📥 生成音频</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 核心音频下载窗口逻辑（不依赖任何库，立即执行） ====================
+        // 立即初始化核心音频下载窗口，不等待页面加载完成
+        (function() {
+            const batchModal = document.getElementById('batch-modal');
+            const batchText = document.getElementById('batch-text-input');
+            const batchFileInput = document.getElementById('batch-file-input');
+            const batchVoiceSelect = document.getElementById('batch-voice-select');
+            const batchSegmentationSelect = document.getElementById('batch-segmentation-select');
+            const batchPitchRange = document.getElementById('batch-pitch-range');
+            const batchRateRange = document.getElementById('batch-rate-range');
+            const batchVolumeRange = document.getElementById('batch-volume-range');
+            const batchPitchValue = document.getElementById('batch-pitch-value');
+            const batchRateValue = document.getElementById('batch-rate-value');
+            const batchVolumeValue = document.getElementById('batch-volume-value');
+            const batchStatus = document.getElementById('batch-status');
+            const batchSynthesizeBtn = document.getElementById('batch-synthesize-btn');
+            const batchDownloadBtn = document.getElementById('batch-download-btn');
+            
+            let batchVoiceList = [];
+            
+            // 打开批量生成弹窗
+            document.getElementById('batch-generate-btn').addEventListener('click', () => {
+                batchModal.style.display = 'flex';
+                
+                // 语音模型已经在 HTML 中静态定义，无需动态加载
+                console.log('批量语音生成弹窗已打开，使用 Edge-TTS 语音模型');
+            });
+            
+            // 关闭弹窗
+            document.getElementById('batch-close-btn').addEventListener('click', () => {
+                batchModal.style.display = 'none';
+            });
+            
+            // 文件上传（完全照批输入框逻辑）
+            batchFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    batchStatus.textContent = '正在读取文件...';
+                    
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const fileContent = event.target.result;
+                        batchText.value = fileContent;
+                        batchStatus.textContent = `文件已加载: ${file.name} (${fileContent.length} 字)`;
+                    };
+                    reader.onerror = () => {
+                        batchStatus.textContent = '文件读取失败，请重试';
+                    };
+                    reader.readAsText(file, 'UTF-8');
+                }
+            });
+            
+            // 实时更新参数显示
+            batchPitchRange.addEventListener('input', () => {
+                batchPitchValue.textContent = batchPitchRange.value;
+            });
+            
+            batchRateRange.addEventListener('input', () => {
+                batchRateValue.textContent = batchRateRange.value;
+            });
+            
+            batchVolumeRange.addEventListener('input', () => {
+                batchVolumeValue.textContent = batchVolumeRange.value;
+            });
+            
+            // 导出配置
+            const batchExportBtn = document.getElementById('batch-export-btn');
+            if (batchExportBtn) {
+                batchExportBtn.addEventListener('click', () => {
+                    const text = batchText.value.trim();
+                    if (!text) {
+                        batchStatus.textContent = '请输入文本或选择文件';
+                        return;
+                    }
+                    
+                    // 创建配置对象
+                    const config = {
+                        text: text,
+                        voice_model: batchVoiceSelect.value,  // 使用 Edge-TTS 语音 ID
+                        voice_name: batchVoiceSelect.options[batchVoiceSelect.selectedIndex]?.text || '',
+                        voice_index: batchVoiceSelect.value,
+                        segmentation_strategy: batchSegmentationSelect.value,
+                        pitch: parseFloat(batchPitchRange.value),
+                        rate: parseFloat(batchRateRange.value),
+                        volume: parseFloat(batchVolumeRange.value),
+                        output_file: 'speech_output.mp3',
+                        method: 'edge-tts-js',  // 标识使用 JavaScript 实现
+                        note: '此配置文件可直接在浏览器中使用，无需 Python 服务器'
+                    };
+                    
+                    // 导出为 JSON 文件
+                    const configJson = JSON.stringify(config, null, 2);
+                    const blob = new Blob([configJson], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'speech_config.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    batchStatus.textContent = '✅ 配置文件已导出：speech_config.json（可用于备用或分享）';
+                });
+            }
+            
+            // 试听预览
+            batchSynthesizeBtn.addEventListener('click', async () => {
+                const text = batchText.value.trim();
+                
+                batchSynthesizeBtn.disabled = true;
+                batchSynthesizeBtn.textContent = '⏳ 试听中...';
+                batchStatus.textContent = '正在试听语音，请稍候...';
+                
+                try {
+                    const selectedVoice = batchVoiceSelect.value;
+                    
+                    // Edge-TTS 语音无法在浏览器中试听，提示用户直接下载
+                    // 简化版本 - 只用一种效果
+                    document.head.insertAdjacentHTML('beforeend', `
+                    <style>
+                        @keyframes download-pulse {
+                            0% {
+                                box-shadow: 0 0 0 0 rgba(74, 0, 255, 0.7);
+                            }
+                            70% {
+                                box-shadow: 0 0 0 10px rgba(74, 0, 255, 0);
+                            }
+                            100% {
+                                box-shadow: 0 0 0 0 rgba(74, 0, 255, 0);
+                            }
+                        }
+                        
+                        .download-pulse {
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                            width: 20px;
+                            height: 20px;
+                            background-color: #4a00ff;
+                            border-radius: 50%;
+                            color: white;
+                            cursor: pointer;
+                            margin: 0 5px;
+                            font-size: 12px;
+                            animation: download-pulse 2s infinite;
+                            transition: all 0.3s ease;
+                        }
+                        
+                        .download-pulse:hover {
+                            transform: scale(1.1);
+                            background-color: #3a00cc;
+                        }
+                    </style>
+                    `);
+
+                    batchStatus.innerHTML = `
+                        <div style="text-align: center; color: #d32f2f; margin-bottom: 15px;">
+                            <strong>本地部署 💡 提示</strong>
+                        </div>
+                        <div style="text-align: left; color: #d32f2f;">
+                            - 安装 Python: 命令行或官网下载安装<br>
+                            - <strong style="color: #4a00ff;">启动服务器（推荐）</strong>: 运行命令 <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">python edge_tts_proxy.py</code> 
+                            <span onclick="downloadFile('tts_voice_proxy/edge_tts_proxy.py', 'edge_tts_proxy.py')" class="download-pulse" title="点击下载">↓</span><br>
+                            - 运行命令行生成（不推荐）: <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">python text_to_speech_edge.py speech_config.json</code>
+                            <span onclick="downloadFile('tts_voice_proxy/text_to_speech_edge.py', 'text_to_speech_edge.py')" class="download-pulse" title="点击下载">↓</span><br>
+                            - <strong style="color: #4a00ff;">手机端使用（需要 Termux）</strong>: <a href="https://www.123865.com/s/yS8UVv-82Red?pwd=6666#" target="_blank" style="color: #4a00ff; text-decoration: none; font-weight: bold;">下载 Termux</a>
+                            <a href="https://www.123865.com/s/yS8UVv-82Red?pwd=6666#" target="_blank" class="download-pulse" style="color: white; text-decoration: none;" title="点击下载">↓</a>，安装后运行: <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">python edge_tts_proxy.py</code>
+                            <span onclick="downloadFile('tts_voice_proxy/edge_tts_proxy.py', 'edge_tts_proxy.py')" class="download-pulse" title="点击下载">↓</span><br>
+                            - 停止服务器: 按 <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">Ctrl + C</code> 或运行命令 <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">netstat -ano | findstr :9191</code> 然后 <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">taskkill /F /PID <进程ID></code>
+                        </div>
+                    `;
+                    batchDownloadBtn.disabled = false;
+                    
+                } catch (error) {
+                    batchStatus.textContent = `试听失败：${error.message}`;
+                }
+                
+                batchSynthesizeBtn.disabled = false;
+                batchSynthesizeBtn.textContent = '🎵 本地部署';
+            });
+            
+            // ==================== 试听预览功能 ====================
+            const previewBtn = document.getElementById('preview-btn');
+            let previewAudio = null;
+            
+            previewBtn.addEventListener('click', async () => {
+                const selectedVoice = batchVoiceSelect.value;
+                const selectedOption = batchVoiceSelect.options[batchVoiceSelect.selectedIndex];
+                const voiceShortName = selectedOption.text.split(' - ')[0];
+                
+                // 生成试听文本
+                const previewText = `你好，我是${voiceShortName}语音模型`;
+                
+                console.log('[试听] 开始试听:', voiceShortName, previewText);
+                
+                // 禁用按钮
+                previewBtn.disabled = true;
+                previewBtn.textContent = '⏳ 生成中...';
+                
+                try {
+                    // 创建 WebSocket 连接
+                    const ws = new WebSocket('ws://localhost:9191');
+                    
+                    const audioData = await new Promise((resolve, reject) => {
+                        ws.onopen = () => {
+                            console.log('[试听] WebSocket 连接已建立');
+                            // 发送试听请求
+                            ws.send(JSON.stringify({
+                                text: previewText,
+                                voice_model: selectedVoice,
+                                pitch: 1,
+                                rate: 1,
+                                volume: 1,
+                                preview: true  // 标记为试听模式
+                            }));
+                        };
+                        
+                        ws.onmessage = (event) => {
+                            const data = JSON.parse(event.data);
+                            
+                            if (data.type === 'audio') {
+                                console.log('[试听] 音频数据已接收');
+                                const audioBytes = new Uint8Array(data.data.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                                const audioBlob = new Blob([audioBytes], { type: 'audio/mpeg' });
+                                resolve(audioBlob);
+                            } else if (data.type === 'error') {
+                                reject(new Error(data.message));
+                            }
+                        };
+                        
+                        ws.onerror = (error) => {
+                            console.error('[试听] WebSocket 错误:', error);
+                            reject(new Error('WebSocket 连接错误'));
+                        };
+                        
+                        ws.onclose = () => {
+                            console.log('[试听] WebSocket 连接已关闭');
+                        };
+                    });
+                    
+                    // 播放试听音频
+                    if (previewAudio) {
+                        previewAudio.pause();
+                        previewAudio = null;
+                    }
+                    
+                    previewAudio = new Audio(URL.createObjectURL(audioData));
+                    previewAudio.play();
+                    
+                    console.log('[试听] 音频播放中');
+                    
+                } catch (error) {
+                    console.error('[试听] 错误:', error);
+                    alert('试听失败: ' + error.message);
+                } finally {
+                    // 恢复按钮
+                    previewBtn.disabled = false;
+                    previewBtn.textContent = '🔊 试听';
+                }
+            });
+            
+            // ==================== 取消生成功能 ====================
+            let currentWebSocket = null;
+            let currentTimerInterval = null;
+            
+            // 添加取消按钮事件监听器（使用事件委托）
+            document.addEventListener('click', (e) => {
+                if (e.target.id === 'cancel-btn') {
+                    // 显示确认弹窗
+                    if (confirm('确定要取消生成吗？')) {
+                        console.log('[取消] 用户确认取消生成');
+                        
+                        // 发送取消消息
+                        if (currentWebSocket && currentWebSocket.readyState === WebSocket.OPEN) {
+                            currentWebSocket.send(JSON.stringify({ type: 'cancel' }));
+                            console.log('[取消] 已发送取消消息');
+                        }
+                        
+                        // 关闭 WebSocket
+                        if (currentWebSocket) {
+                            currentWebSocket.close();
+                            currentWebSocket = null;
+                        }
+                        
+                        // 停止计时器
+                        if (currentTimerInterval) {
+                            clearInterval(currentTimerInterval);
+                            currentTimerInterval = null;
+                        }
+                        
+                        // 恢复按钮状态
+                        batchDownloadBtn.disabled = false;
+                        batchDownloadBtn.textContent = '📥 生成音频';
+                        
+                        // 更新状态信息，进度条整体消失
+                        batchStatus.innerHTML = `
+                            <strong>❌ 生成已取消</strong><br><br>
+                            <div style="font-size: 14px; color: #666;">
+                                音频生成已被用户取消
+                            </div>
+                        `;
+                        batchStatus.style.textAlign = 'center';
+                        batchStatus.style.display = 'block';
+                        
+                        console.log('[取消] 生成已取消');
+                    }
+                }
+            });
+            
+            // 生成音频文件（直接使用 JavaScript 调用 Edge-TTS API）
+            batchDownloadBtn.addEventListener('click', async () => {
+                const text = batchText.value.trim();
+                
+                if (!text) {
+                    batchStatus.textContent = '请输入文本或选择文件';
+                    return;
+                }
+                
+                batchDownloadBtn.disabled = true;
+                batchDownloadBtn.textContent = '⏳ 生成中...';
+                
+                // 添加进度条
+                batchStatus.innerHTML = `
+                    <div style="width: 100%;">
+                                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
+                                                <span>正在生成音频...</span>
+                                                <div style="display: flex; align-items: center; gap: 15px;">
+                                                    <span id="progress-timer">0秒</span>
+                                                    <span id="progress-percent">0%</span>
+                                                    <button id="cancel-btn" style="padding: 5px 12px; border: none; border-radius: 5px; background-color: #f44336; color: white; cursor: pointer; font-size: 14px;">❌ 取消</button>
+                                                </div>
+                                            </div>                            <div style="width: 100%; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; height: 20px;">
+                        <div id="progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #2196F3, #64B5F6); transition: width 0.3s ease; border-radius: 10px;"></div>
+                    </div>
+                </div>
+                `;
+                
+                try {
+                    // 获取参数
+                    const selectedVoice = batchVoiceSelect.value;
+                    const pitch = parseFloat(batchPitchRange.value);
+                    const rate = parseFloat(batchRateRange.value);
+                    const volume = parseFloat(batchVolumeRange.value);
+                    
+                    // 获取进度条元素
+                    const progressBar = document.getElementById('progress-bar');
+                    const progressPercent = document.getElementById('progress-percent');
+                    const progressTimer = document.getElementById('progress-timer');
+                    
+                    // 开始计时
+                    let startTime = Date.now();
+                    currentTimerInterval = setInterval(() => {
+                        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                        if (progressTimer) {
+                            if (elapsed >= 60) {
+                                const minutes = Math.floor(elapsed / 60);
+                                const seconds = elapsed % 60;
+                                progressTimer.textContent = `${minutes}分${seconds}秒`;
+                            } else {
+                                progressTimer.textContent = `${elapsed}秒`;
+                            }
+                        }
+                    }, 1000);
+                    
+                    // 获取模型简写名（从option文本中提取）
+                    const voiceOption = batchVoiceSelect.options[batchVoiceSelect.selectedIndex];
+                    const voiceShortName = voiceOption.text.split(' - ')[0]; // 提取"晓晓"部分
+                    
+                    console.log('[Edge-TTS] 开始生成音频');
+                    console.log('[Edge-TTS] 语音模型:', selectedVoice);
+                    console.log('[Edge-TTS] 模型简写:', voiceShortName);
+                    console.log('[Edge-TTS] 文本长度:', text.length);
+                    
+                    // 生成时间戳文件名（格式：模型简写_speech_时间戳.mp3）
+                    const timestamp = new Date().getTime();
+                    const outputFileName = `${voiceShortName}_speech_${timestamp}.mp3`;
+                    
+                    // 创建 WebSocket 连接
+                    const ws = new WebSocket('ws://localhost:9191');
+                    currentWebSocket = ws;  // 保存引用用于取消
+                    
+                    // 创建请求配置
+                    const requestConfig = {
+                        text: text,
+                        voice_model: selectedVoice,
+                        pitch: pitch,
+                        rate: rate,
+                        volume: volume
+                    };
+                    
+                    // 使用 Promise 包装 WebSocket
+                    const audioData = await new Promise((resolve, reject) => {
+                        let totalBytes = 0;
+                        let audioHex = '';
+                        
+                        ws.onopen = () => {
+                            console.log('[WebSocket] 连接已建立');
+                            // 发送配置
+                            ws.send(JSON.stringify(requestConfig));
+                        };
+                        
+                        ws.onmessage = (event) => {
+                            const data = JSON.parse(event.data);
+                            
+                            if (data.type === 'init') {
+                                console.log('[WebSocket] 总块数:', data.total_chunks, '总大小:', data.total_bytes);
+                                totalBytes = data.total_bytes;
+                            } else if (data.type === 'progress') {
+                                // 更新进度条
+                                if (progressBar && progressPercent) {
+                                    progressBar.style.width = data.progress + '%';
+                                    progressPercent.textContent = data.progress + '%';
+                                }
+                                console.log(`[WebSocket] 进度: ${data.progress}%`);
+                            } else if (data.type === 'audio') {
+                                // 接收音频数据（十六进制）
+                                audioHex = data.data;
+                                console.log('[WebSocket] 音频数据已接收，大小:', data.size);
+                            } else if (data.type === 'complete') {
+                                console.log('[WebSocket] 音频生成完成');
+                                // 将十六进制转换为二进制
+                                const audioBytes = new Uint8Array(audioHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                                const audioBlob = new Blob([audioBytes], { type: 'audio/mpeg' });
+                                resolve(audioBlob);
+                            } else if (data.type === 'cancelled') {
+                                console.log('[WebSocket] 生成已取消');
+                                reject(new Error('生成已取消'));
+                            } else if (data.type === 'error') {
+                                reject(new Error(data.message));
+                            }
+                        };
+                        
+                        ws.onerror = (error) => {
+                            console.error('[WebSocket] 错误:', error);
+                            reject(new Error('WebSocket 连接错误'));
+                        };
+                        
+                        ws.onclose = () => {
+                            console.log('[WebSocket] 连接已关闭');
+                        };
+                    });
+                    
+                    const audioSize = audioData.size;
+                    console.log('[Edge-TTS] 音频文件已生成，大小:', audioSize);
+                    
+                    if (audioSize === 0) {
+                        throw new Error('生成的音频文件大小为 0');
+                    }
+                    
+                    // 创建 blob URL
+                    const audioUrl = URL.createObjectURL(audioData);
+                    
+                    // 停止计时并显示总时间
+                    clearInterval(currentTimerInterval);
+                    currentTimerInterval = null;
+                    const totalTime = Math.floor((Date.now() - startTime) / 1000);
+                    if (progressTimer) {
+                        if (totalTime >= 60) {
+                            const minutes = Math.floor(totalTime / 60);
+                            const seconds = totalTime % 60;
+                            progressTimer.textContent = `总用时: ${minutes}分${seconds}秒`;
+                        } else {
+                            progressTimer.textContent = `总用时: ${totalTime}秒`;
+                        }
+                    }
+                    
+                    // 清理 WebSocket 引用
+                    currentWebSocket = null;
+                    
+                    // 更新进度条为完成
+                    if (progressBar && progressPercent) {
+                        progressBar.style.width = '100%';
+                        progressPercent.textContent = '完成';
+                    }
+                    
+                    // 自动下载
+                    const a = document.createElement('a');
+                    a.href = audioUrl;
+                    a.download = outputFileName;
+                    a.click();
+                    
+                    // 创建音频播放器和管理区域
+                    const audioPlayerDiv = document.createElement('div');
+                    audioPlayerDiv.style.marginTop = '20px';
+                    audioPlayerDiv.style.padding = '15px';
+                    audioPlayerDiv.style.borderRadius = '8px';
+                    audioPlayerDiv.style.backgroundColor = '#f0f8ff';
+                    audioPlayerDiv.style.border = '1px solid #2196F3';
+                    
+                    audioPlayerDiv.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                            <strong style="color: #2196F3;">🎵 音频播放器</strong>
+                            <audio id="audio-player-${timestamp}" controls style="flex: 1;">
+                                <source src="${audioUrl}" type="audio/mpeg">
+                                您的浏览器不支持音频播放
+                            </audio>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="play-btn-${timestamp}" 
+                                    style="padding: 8px 15px; border: none; border-radius: 5px; background-color: #4CAF50; color: white; cursor: pointer;">
+                                ▶️ 播放
+                            </button>
+                            <button id="pause-btn-${timestamp}" 
+                                    style="padding: 8px 15px; border: none; border-radius: 5px; background-color: #FF9800; color: white; cursor: pointer;">
+                                ⏸️ 暂停
+                            </button>
+                            <a id="download-link-${timestamp}" href="${audioUrl}" download="${outputFileName}" 
+                                    style="padding: 8px 15px; border: none; border-radius: 5px; background-color: #2196F3; color: white; text-decoration: none; cursor: pointer; display: inline-block;">
+                                📥 下载
+                            </a>
+                        </div>
+                    `;
+                    
+                    // 添加事件监听器（使用事件委托，避免 setTimeout）
+                    batchStatus.addEventListener('click', (e) => {
+                        if (e.target.id === `play-btn-${timestamp}`) {
+                            const audioElement = document.getElementById(`audio-player-${timestamp}`);
+                            if (audioElement) audioElement.play();
+                        } else if (e.target.id === `pause-btn-${timestamp}`) {
+                            const audioElement = document.getElementById(`audio-player-${timestamp}`);
+                            if (audioElement) audioElement.pause();
+                        }
+                    });
+                    
+                    // 添加到状态区域
+                    const voiceName = batchVoiceSelect.options[batchVoiceSelect.selectedIndex]?.text || selectedVoice;
+                    
+                    batchStatus.innerHTML = `
+                        <strong>✅ 音频文件生成成功！</strong><br><br>
+                        <div style="font-size: 14px; display: inline-block; text-align: left;">
+                            <div>📁 文件名：${outputFileName}</div>
+                            <div>📊 文件大小：${(audioSize / 1024).toFixed(2)} KB</div>
+                            <div>🗣️ 语音模型：${voiceName}</div>
+                            <div>⚙️ 音调：${pitch} | 语速：${rate} | 音量：${volume}</div>
+                        </div>
+                    `;
+                    
+                    // 设置 batchStatus 居中
+                    batchStatus.style.textAlign = 'center';
+                    batchStatus.style.display = 'block';
+                    
+                    // 将播放器插入到信息前面
+                    batchStatus.insertBefore(audioPlayerDiv, batchStatus.firstChild);
+                    
+                    // 恢复按钮状态
+                    batchDownloadBtn.disabled = false;
+                    batchDownloadBtn.textContent = '📥 生成音频';
+                    
+                    return; // 结束执行
+                    
+                } catch (error) {
+                    console.error('[Edge-TTS] 生成失败:', error);
+                    batchStatus.innerHTML = `
+                        <div style="text-align: left; color: #d32f2f;">
+                            <strong>❌ 生成失败</strong><br><br>
+                            错误信息：${error.message}<br><br>
+                            <strong>建议：</strong><br>
+                            - 安装 Python: 命令行或官网下载安装<br>
+                            - 启动服务器（推荐）: 运行命令 <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">python edge_tts_proxy.py</code> 
+                              <span onclick="downloadFile('tts_voice_proxy/edge_tts_proxy.py', 'edge_tts_proxy.py')" style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; background-color: #2196F3; border-radius: 50%; color: white; cursor: pointer; margin: 0 5px; font-size: 12px;" title="点击下载">↓</span><br>
+                            - 运行命令行生成（不推荐）: <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">python text_to_speech_edge.py speech_config.json</code>
+                              <span onclick="downloadFile('tts_voice_proxy/text_to_speech_edge.py', 'text_to_speech_edge.py')" style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; background-color: #2196F3; border-radius: 50%; color: white; cursor: pointer; margin: 0 5px; font-size: 12px;" title="点击下载">↓</span><br>
+                            - 手机端使用（需要 Termux）: <a href="https://www.123865.com/s/yS8UVv-82Red?pwd=6666#" target="_blank" style="color: #FF9800; text-decoration: none;">下载 Termux</a>
+                              <a href="https://www.123865.com/s/yS8UVv-82Red?pwd=6666#" target="_blank" style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; background-color: #2196F3; border-radius: 50%; color: white; text-decoration: none; cursor: pointer; margin: 0 5px; font-size: 12px;" title="点击下载">↓</a>，安装后运行: <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">python edge_tts_proxy.py</code>
+                              <span onclick="downloadFile('tts_voice_proxy/edge_tts_proxy.py', 'edge_tts_proxy.py')" style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; background-color: #2196F3; border-radius: 50%; color: white; cursor: pointer; margin: 0 5px; font-size: 12px;" title="点击下载">↓</span><br>
+                            - 停止服务器: 按 <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">Ctrl + C</code> 或运行命令 <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">netstat -ano | findstr :9191</code> 然后 <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">taskkill /F /PID <进程ID></code>
+                        </div>
+                    `;
+                }
+                
+                batchDownloadBtn.disabled = false;
+                batchDownloadBtn.textContent = '📥 生成音频';
+            });
+        })();
+
+        // ==================== 拼音转换功能（不依赖语音合成） ====================
+        // 拼音转换相关的变量和初始化
+        const hanziInput = document.getElementById('hanziInput');
+        const fileInput = document.getElementById('file-input');
+        const undoBtn = document.getElementById('undo-btn');
+        const redoBtn = document.getElementById('redo-btn');
+        const status = document.getElementById('status');
+        
+        // 撤销和反撤销功能相关变量
+        let currentContent = '';
+        let undoStack = [];
+        let redoStack = [];
+        
+        //Promise异步执行，加载pinyinpro库（移到外面，不依赖语音合成）
+        function loadPinyinPro() {
+            return new Promise((resolve, reject) => {
+                if (window.pinyinPro) {
+                    resolve();
+                    return;
+                }
+
+                const CDN_TIMEOUT = 3000;
+                let completed = false;
+                const cdnScript = document.createElement('script');
+                
+                const timer = setTimeout(() => {
+                    if (completed) return;
+                    console.log('CDN加载超时，切换到本地');
+                    loadLocal();
+                }, CDN_TIMEOUT);
+                
+                function cleanup() {
+                    clearTimeout(timer);
+                    if (cdnScript.parentNode) {
+                        cdnScript.parentNode.removeChild(cdnScript);
+                    }
+                }
+                
+                function loadLocal() {
+                    if (completed) return;
+                    completed = true;
+                    cleanup();
+                    
+                    const localScript = document.createElement('script');
+                    localScript.src = './CDN/pinyinpro.js';
+                    localScript.onload = () => {
+                        console.log('本地文件加载成功');
+                        resolve();
+                    };
+                    localScript.onerror = () => {
+                        console.error('本地文件加载失败');
+                        reject(new Error('无法加载 pinyin-pro 库'));
+                    };
+                    document.head.appendChild(localScript);
+                }
+                
+                cdnScript.src = 'https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/dist/index.js';
+                cdnScript.async = false;
+                
+                cdnScript.onload = () => {
+                    if (completed) return;
+                    completed = true;
+                    cleanup();
+                    console.log('CDN加载成功');
+                    resolve();
+                };
+                
+                cdnScript.onerror = () => {
+                    if (completed) return;
+                    console.log('CDN加载失败，切换到本地');
+                    loadLocal();
+                };
+                
+                document.head.appendChild(cdnScript);
+            });
+        }
+        
+        // 检查浏览器是否支持语音合成
+        if ('speechSynthesis' in window) {
+            const synth = window.speechSynthesis;
+            const voiceSelect = document.getElementById('voice-select');
+            const pitchRange = document.getElementById('pitch-range');
+            const rateRange = document.getElementById('rate-range');
+            const volumeRange = document.getElementById('volume-range');
+            const pitchValue = document.getElementById('pitch-value');
+            const rateValue = document.getElementById('rate-value');
+            const volumeValue = document.getElementById('volume-value');
+            const speakBtn = document.getElementById('speak-btn');
+            const pauseBtn = document.getElementById('pause-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            
+            let isPaused = false;
+            let voices = [];
+            
+            // 初始化语音选择
+            function initVoiceSelect() {
+                voiceSelect.innerHTML = '';
+                const loadingOption = document.createElement('option');
+                loadingOption.value = -1;
+                loadingOption.textContent = '正在加载语音模型...';
+                voiceSelect.appendChild(loadingOption);
+                
+                // 初始化自定义下拉框
+                const selectOptions = document.getElementById('select-options');
+                selectOptions.innerHTML = '';
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'select-option';
+                loadingDiv.setAttribute('data-value', -1);
+                loadingDiv.textContent = '正在加载语音模型...';
+                selectOptions.appendChild(loadingDiv);
+            }
+            
+            // 异步加载可用语音
+            function loadVoices() {
+                // 使用 requestAnimationFrame 确保不阻塞UI
+                requestAnimationFrame(() => {
+                    voices = synth.getVoices();
+                    
+                    if (voices.length > 0) {
+                        voiceSelect.innerHTML = '';
+                        
+                        voices.forEach((voice, index) => {
+                            const option = document.createElement('option');
+                            option.value = index;
+                            option.textContent = `${voice.name} (${voice.lang})`;
+                            if (voice.default) {
+                                option.textContent += ' -- 默认';
+                            }
+                            if (voice.lang.includes('zh')) {
+                                option.textContent += ' ★中文';
+                            }
+                            voiceSelect.appendChild(option);
+                        });
+                        
+                        // 更新自定义下拉框
+                        updateCustomSelect();
+                        
+                        // 尝试选择中文语音
+                        let chineseVoiceFound = false;
+                        for (let i = 0; i < voices.length; i++) {
+                            if (voices[i].lang.includes('zh')) {
+                                voiceSelect.value = i;
+                                chineseVoiceFound = true;
+                                break;
+                            }
+                        }
+                        
+                        // 如果没有找到中文语音，选择默认语音
+                        if (!chineseVoiceFound) {
+                            for (let i = 0; i < voices.length; i++) {
+                                if (voices[i].default) {
+                                    voiceSelect.value = i;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // 更新自定义选择显示
+                        updateSelectedVoiceDisplay();
+                    } else {
+                        // 如果仍然没有语音，显示默认模型
+                        voiceSelect.innerHTML = '';
+                        const option = document.createElement('option');
+                        option.value = -1;
+                        option.textContent = '默认模型';
+                        voiceSelect.appendChild(option);
+                        
+                        // 更新自定义下拉框
+                        updateCustomSelect();
+                    }
+                });
+            }
+            
+            // 更新自定义下拉框
+            function updateCustomSelect() {
+                const selectOptions = document.getElementById('select-options');
+                selectOptions.innerHTML = '';
+                
+                voices.forEach((voice, index) => {
+                    const optionDiv = document.createElement('div');
+                    optionDiv.className = 'select-option';
+                    optionDiv.setAttribute('data-value', index);
+                    
+                    let displayText = `${voice.name} (${voice.lang})`;
+                    if (voice.default) {
+                        displayText += ' -- 默认';
+                    }
+                    if (voice.lang.includes('zh')) {
+                        displayText += ' ★中文';
+                    }
+                    
+                    optionDiv.textContent = displayText;
+                    selectOptions.appendChild(optionDiv);
+                });
+            }
+            
+            // 更新选中的语音显示
+            function updateSelectedVoiceDisplay() {
+                const selectedVoice = document.getElementById('selected-voice');
+                const selectedIndex = voiceSelect.value;
+                
+                if (selectedIndex >= 0 && selectedIndex < voices.length) {
+                    const voice = voices[selectedIndex];
+                    let displayText = `${voice.name} (${voice.lang})`;
+                    if (voice.default) {
+                        displayText += ' -- 默认';
+                    }
+                    if (voice.lang.includes('zh')) {
+                        displayText += ' ★中文';
+                    }
+                    selectedVoice.textContent = displayText;
+                } else {
+                    selectedVoice.textContent = '请选择语音模型';
+                }
+                
+                // 更新选中状态
+                const options = document.querySelectorAll('.select-option');
+                options.forEach(option => {
+                    option.classList.remove('selected');
+                    if (option.getAttribute('data-value') == selectedIndex) {
+                        option.classList.add('selected');
+                    }
+                });
+            }
+            
+            // 撤销操作
+            function undo() {
+                if (undoStack.length === 0) {
+                    showToast('没有可撤销的操作', 'error');
+                    return;
+                }
+                
+                // 将当前内容添加到重做栈
+                redoStack.push(currentContent);
+                
+                // 从撤销栈中取出上一个内容
+                currentContent = undoStack.pop();
+                
+                // 更新显示
+                updateDisplay();
+                
+                showToast('已撤销', 'success');
+            }
+            
+            // 反撤销操作
+            function redo() {
+                if (redoStack.length === 0) {
+                    showToast('没有可重做的操作', 'error');
+                    return;
+                }
+                
+                // 将当前内容添加到撤销栈
+                undoStack.push(currentContent);
+                
+                // 从重做栈中取出下一个内容
+                currentContent = redoStack.pop();
+                
+                // 更新显示
+                updateDisplay();
+                
+                showToast('已重做', 'success');
+            }
+            
+            // 更新显示
+            function updateDisplay() {
+                if (currentContent) {
+                    hanziInput.value = currentContent;
+                } else {
+                    hanziInput.value = '';
+                }
+                
+                // 更新按钮状态
+                updateButtonStates();
+                
+                // 更新拼音转换
+                if (typeof convertHanzi === 'function') {
+                    convertHanzi();
+                }
+            }
+            
+            // 更新按钮状态
+            function updateButtonStates() {
+                // 根据栈的状态启用/禁用按钮
+                undoBtn.disabled = undoStack.length === 0;
+                redoBtn.disabled = redoStack.length === 0;
+            }
+            
+            // 显示Toast提示
+            function showToast(message, type) {
+                const toast = document.getElementById('toast');
+                
+                // 根据类型添加图标
+                let icon = '';
+                switch(type) {
+                    case 'success':
+                        icon = '🌟 ';
+                        break;
+                    case 'error':
+                        icon = '⚠️ ';
+                        break;
+                    default:
+                        icon = '💡 ';
+                }
+                
+                toast.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;">${icon}${message}</span>`;
+                toast.className = `toast ${type}`;
+                toast.classList.add('show');
+                
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
+            }
+            
+            // 设置预设文本
+            function setText(text) {
+                // 保存当前内容到撤销栈
+                if (currentContent) {
+                    undoStack.push(currentContent);
+                }
+                
+                // 设置新内容
+                currentContent = text;
+                
+                // 清空重做栈
+                redoStack = [];
+                
+                // 更新显示
+                updateDisplay();
+                
+                // 更新分段数量
+                updateSegmentCount();
+            }
+            
+            // 全局变量存储当前朗读对象
+            let currentUtterance = null;
+            let currentText = '';
+            let currentVoiceIndex = 0;
+            let isSpeaking = false;
+            let currentPosition = 0;
+            let textSegments = [];
+            let currentSegmentIndex = 0;
+            let pendingStrategySwitch = false; // 标记是否需要在当前段落读完后切换策略
+            
+            // 获取当前选择的分段策略
+            function getCurrentSegmentationStrategy() {
+                const selectedRadio = document.querySelector('input[name="segmentation"]:checked');
+                return selectedRadio ? selectedRadio.value : 'weight';
+            }
+            
+            // 获取分段策略的中文名称
+            function getSegmentationStrategyName(strategy) {
+                const strategyNames = {
+                    'weight': '智能权重评分',
+                    'prosody': '语音韵律分割',
+                    'adaptive': '混合自适应分段',
+                    'context': '实时感知分段',
+                    'semantic': '语义智能分段',
+                    'rhythm': '节奏模式分段'
+                };
+                return strategyNames[strategy] || '未知策略';
+            }
+            
+            // 更新状态栏显示分段数量
+            function updateSegmentCount() {
+                const text = hanziInput.value.trim();
+                if (!text) {
+                    status.textContent = '准备就绪';
+                    return;
+                }
+                
+                const segments = splitTextIntoSegments(text);
+                const strategy = getCurrentSegmentationStrategy();
+                const strategyName = getSegmentationStrategyName(strategy);
+                status.textContent = `准备就绪 | ${strategyName} | 共${segments.length}段`;
+            }
+            
+            // 将文本分割成小段，用于实时调整参数
+            function splitTextIntoSegments(text) {
+                const strategy = getCurrentSegmentationStrategy();
+                
+                switch(strategy) {
+                    case 'prosody':
+                        return prosodyBasedSegmentation(text);
+                    case 'adaptive':
+                        return adaptiveSegmentation(text);
+                    case 'context':
+                        return contextAwareSegmentation(text);
+                    case 'semantic':
+                        return semanticSegmentation(text);
+                    case 'rhythm':
+                        return rhythmBasedSegmentation(text);
+                    case 'weight':
+                    default:
+                        return weightBasedSegmentation(text);
+                }
+            }
+            
+            // 1. 智能权重评分系统（推荐）
+            function weightBasedSegmentation(text) {
+                const segments = [];
+                let currentSegment = '';
+                let contextScore = 0;
+                
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    const nextChar = text[i + 1];
+                    const prevChar = text[i - 1];
+                    currentSegment += char;
+                    
+                    // 计算当前分割点的综合权重
+                    const splitScore = calculateAdvancedSplitScore(char, currentSegment, i, text, prevChar, nextChar, contextScore);
+                    
+                    // 动态阈值：根据文本复杂度和上下文调整
+                    const threshold = getAdvancedThreshold(currentSegment, segments, text);
+                    
+                    // 如果权重超过阈值，进行分割
+                    if (splitScore >= threshold) {
+                        segments.push(currentSegment);
+                        currentSegment = '';
+                        contextScore = 0;
+                    } else {
+                        // 累积上下文分数
+                        contextScore = Math.max(0, contextScore - 0.5);
+                    }
+                }
+                
+                // 添加剩余内容
+                if (currentSegment) {
+                    segments.push(currentSegment);
+                }
+                
+                // 智能合并和优化
+                return optimizeSegments(segments);
+            }
+            
+            // 高级分割分数计算
+            function calculateAdvancedSplitScore(char, segment, position, fullText, prevChar, nextChar, contextScore) {
+                let score = 0;
+                
+                // 1. 标点符号权重（最高优先级）
+                if (/[。！？]/.test(char)) {
+                    score += 20; // 句末标点最高分
+                } else if (/[，、；：]/.test(char)) {
+                    score += 12; // 分句标点高分
+                } else if (/[…—]/.test(char)) {
+                    score += 15; // 特殊标点
+                }
+                
+                // 2. 语法结构权重
+                if (/[的得地]/.test(char) && segment.length >= 6) {
+                    score += 6; // 助词后分割
+                } else if (/[了着过]/.test(char) && isChineseChar(prevChar)) {
+                    score += 5; // 动态助词
+                } else if (/[和与及或]/.test(char) && segment.length >= 8) {
+                    score += 7; // 连词后分割
+                }
+                
+                // 3. 语义停顿权重
+                if (/[因为所以如果那么虽然然而但是不过可是]/.test(char)) {
+                    score += 8; // 逻辑连接词
+                    if (!isPartOfComplexExpression(char, nextChar)) {
+                        score += 3; // 非复合表达加分
+                    }
+                }
+                
+                // 4. 长度控制权重
+                if (segment.length > 25) {
+                    score += 10; // 强制分割过长段落
+                } else if (segment.length > 18) {
+                    score += 5; // 建议分割
+                } else if (segment.length > 12) {
+                    score += 2; // 可选分割
+                }
+                
+                // 5. 上下文感知权重
+                // 避免在特定模式中分割
+                if (/[a-zA-Z0-9]/.test(nextChar)) {
+                    score -= 15; // 避免在英文/数字中分割
+                }
+                if (/[时分秒]/.test(char) && /[0-9]/.test(nextChar)) {
+                    score -= 12; // 避免在时间表达式中分割
+                }
+                if (/[第]/.test(prevChar) && /[一二三四五六七八九十百千万]/.test(char)) {
+                    score -= 10; // 避免在序数词中分割
+                }
+                
+                // 6. 韵律权重
+                if (position > 0 && /[仄平]/.test(getCharTone(char))) {
+                    const prevTone = getCharTone(prevChar);
+                    if (prevTone && getCharTone(char) !== prevTone) {
+                        score += 3; // 声调变化点
+                    }
+                }
+                
+                return Math.max(0, score + contextScore);
+            }
+            
+            // 高级动态阈值计算
+            function getAdvancedThreshold(segment, existingSegments, fullText) {
+                let threshold = 8; // 基础阈值
+                
+                // 根据文本复杂度调整
+                const complexity = calculateTextComplexity(fullText);
+                threshold += complexity * 2;
+                
+                // 根据段落长度调整
+                if (segment.length < 4) {
+                    threshold += 5; // 避免过短段落
+                } else if (segment.length > 22) {
+                    threshold -= 3; // 鼓励分割过长段落
+                }
+                
+                // 根据已有段落数量调整
+                if (existingSegments.length > 15) {
+                    threshold += 2; // 段落过多时提高阈值
+                }
+                
+                // 根据标点密度调整
+                const punctuationDensity = calculatePunctuationDensity(segment);
+                if (punctuationDensity > 0.3) {
+                    threshold -= 2; // 标点密集时降低阈值
+                }
+                
+                return threshold;
+            }
+            
+            // 2. 基于语音韵律的分割
+            function prosodyBasedSegmentation(text) {
+                const segments = [];
+                let currentSegment = '';
+                let syllableCount = 0;
+                let stressPattern = 0;
+                let intonationCurve = 0;
+                
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    const nextChar = text[i + 1];
+                    currentSegment += char;
+                    
+                    // 计算音节和韵律特征
+                    if (isChineseChar(char)) {
+                        syllableCount++;
+                        const tone = getCharTone(char);
+                        if (tone) {
+                            intonationCurve += getToneWeight(tone);
+                        }
+                        
+                        // 重音模式检测（2-4音节一个重音）
+                        if (syllableCount % 3 === 0 || isStressedWord(char, nextChar)) {
+                            stressPattern++;
+                        }
+                    }
+                    
+                    // 韵律分割条件
+                    if (shouldSplitAtProsodyBoundary(char, syllableCount, stressPattern, intonationCurve, i, text, nextChar)) {
+                        segments.push(currentSegment);
+                        currentSegment = '';
+                        syllableCount = 0;
+                        stressPattern = 0;
+                        intonationCurve = 0;
+                    }
+                }
+                
+                if (currentSegment) {
+                    segments.push(currentSegment);
+                }
+                
+                return balanceProsodySegments(segments);
+            }
+            
+            // 高级韵律边界判断
+            function shouldSplitAtProsodyBoundary(char, syllableCount, stressPattern, intonationCurve, position, fullText, nextChar) {
+                // 句末标点强制分割
+                if (/[。！？]/.test(char)) return true;
+                
+                // 音节控制：4-8个音节一个段落
+                if (syllableCount >= 6 && /[，、；：]/.test(char)) return true;
+                if (syllableCount >= 8) return true;
+                
+                // 重音模式：重音词后分割
+                if (stressPattern >= 2 && /[的了在是有]/.test(char)) return true;
+                
+                // 语调曲线：在语调转折点分割
+                if (Math.abs(intonationCurve) > 3 && /[但而因为所以如果那么]/.test(char)) return true;
+                
+                // 节奏模式：在节奏停顿点分割
+                if (syllableCount >= 4 && isRhythmBoundary(char, nextChar)) return true;
+                
+                return false;
+            }
+            
+            // 3. 混合自适应分段
+            function adaptiveSegmentation(text) {
+                // 深度分析文本特征
+                const textFeatures = analyzeTextFeatures(text);
+                const strategy = generateAdaptiveStrategy(textFeatures);
+                
+                // 多层分割
+                const primarySegments = performPrimarySegmentation(text, strategy);
+                const optimizedSegments = optimizeSegmentation(primarySegments, textFeatures);
+                
+                return optimizedSegments;
+            }
+            
+            // 深度文本特征分析
+            function analyzeTextFeatures(text) {
+                // 确保文本不为空
+                if (!text || text.trim().length === 0) {
+                    return {
+                        type: 'general',
+                        complexity: 0.5,
+                        avgSentenceLength: 10,
+                        punctuationPattern: { density: 0.1 },
+                        semanticDensity: 0.5,
+                        rhythmPattern: { pattern: 'regular', intensity: 0.5, tempo: 1.0 },
+                        formalLevel: 'medium'
+                    };
+                }
+                
+                return {
+                    type: detectTextType(text),
+                    complexity: calculateTextComplexity(text),
+                    avgSentenceLength: calculateAvgSentenceLength(text),
+                    punctuationPattern: analyzePunctuationPattern(text),
+                    semanticDensity: calculateSemanticDensity(text),
+                    rhythmPattern: analyzeRhythmPattern(text),
+                    formalLevel: detectFormalLevel(text)
+                };
+            }
+            
+            // 生成自适应策略
+            function generateAdaptiveStrategy(features) {
+                const strategy = {
+                    baseSegmentLength: 15,
+                    maxLength: 25,
+                    minLength: 6,
+                    splitPoints: /[，。！？]/g,
+                    optimizationRules: []
+                };
+                
+                // 根据文本类型调整
+                switch(features.type) {
+                    case 'conversation':
+                        strategy.baseSegmentLength = 10;
+                        strategy.maxLength = 18;
+                        strategy.minLength = 5;
+                        strategy.splitPoints = /[，。！？]/g;
+                        break;
+                    case 'formal':
+                        strategy.baseSegmentLength = 18;
+                        strategy.maxLength = 30;
+                        strategy.minLength = 8;
+                        strategy.splitPoints = /[。！？；]/g;
+                        break;
+                    case 'poetry':
+                        strategy.baseSegmentLength = 7;
+                        strategy.maxLength = 12;
+                        strategy.minLength = 4;
+                        strategy.splitPoints = /[，。！？]/g;
+                        break;
+                    case 'technical':
+                        strategy.baseSegmentLength = 20;
+                        strategy.maxLength = 35;
+                        strategy.minLength = 10;
+                        strategy.splitPoints = /[。！？；：]/g;
+                        break;
+                    default:
+                        strategy.baseSegmentLength = 15;
+                        strategy.maxLength = 25;
+                        strategy.minLength = 6;
+                        strategy.splitPoints = /[，。！？]/g;
+                }
+                
+                // 根据复杂度调整
+                if (features.complexity > 0.7) {
+                    strategy.maxLength = Math.floor(strategy.maxLength * 1.2);
+                    strategy.minLength = Math.floor(strategy.minLength * 0.8);
+                }
+                
+                // 确保参数在合理范围内
+                strategy.baseSegmentLength = Math.max(5, Math.min(30, strategy.baseSegmentLength));
+                strategy.maxLength = Math.max(10, Math.min(50, strategy.maxLength));
+                strategy.minLength = Math.max(3, Math.min(15, strategy.minLength));
+                
+                return strategy;
+            }
+            
+            // 4. 实时感知分段
+            function contextAwareSegmentation(text) {
+                // 获取当前语音参数
+                const speechRate = parseFloat(rateRange.value);
+                const pitch = parseFloat(pitchRange.value);
+                const volume = parseFloat(volumeRange.value);
+                
+                // 根据语音参数计算最佳分段策略
+                const segmentParams = calculateOptimalSegmentParams(speechRate, pitch, volume);
+                
+                // 执行上下文感知分段
+                return performContextAwareSegmentation(text, segmentParams);
+            }
+            
+            // 计算最佳分段参数
+            function calculateOptimalSegmentParams(speechRate, pitch, volume) {
+                return {
+                    targetLength: calculateSegmentLength(speechRate),
+                    splitSensitivity: calculateSplitSensitivity(pitch),
+                    mergeThreshold: calculateMergeThreshold(volume),
+                    realTimeFactor: calculateRealTimeFactor(speechRate, pitch, volume)
+                };
+            }
+            
+            // 执行上下文感知分段
+            function performContextAwareSegmentation(text, params) {
+                const segments = [];
+                let currentSegment = '';
+                let contextScore = 0;
+                
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    const nextChar = text[i + 1];
+                    currentSegment += char;
+                    
+                    // 更新上下文分数
+                    contextScore = updateContextScore(char, contextScore, params);
+                    
+                    // 检查是否应该分割
+                    if (shouldSplitInContext(currentSegment, char, nextChar, contextScore, params)) {
+                        segments.push(currentSegment);
+                        currentSegment = '';
+                        contextScore = 0;
+                    }
+                }
+                
+                if (currentSegment) {
+                    segments.push(currentSegment);
+                }
+                
+                return segments;
+            }
+            
+            // 5. 基于语义的智能分段
+            function semanticSegmentation(text) {
+                // 语义分析
+                const semanticUnits = performSemanticAnalysis(text);
+                const semanticGraph = buildSemanticGraph(semanticUnits);
+                
+                // 基于语义图进行分段
+                const segments = segmentBySemanticBoundaries(semanticGraph);
+                
+                return optimizeSemanticSegments(segments);
+            }
+            
+            // 执行语义分析
+            function performSemanticAnalysis(text) {
+                const units = [];
+                let currentUnit = {
+                    text: '',
+                    type: 'unknown',
+                    importance: 0,
+                    connections: []
+                };
+                
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    currentUnit.text += char;
+                    
+                    // 分析语义类型
+                    currentUnit.type = classifySemanticUnit(currentUnit.text);
+                    currentUnit.importance = calculateSemanticImportance(currentUnit.text);
+                    
+                    // 在语义边界分割
+                    if (isSemanticBoundary(char, currentUnit.text)) {
+                        units.push({...currentUnit});
+                        currentUnit = {
+                            text: '',
+                            type: 'unknown',
+                            importance: 0,
+                            connections: []
+                        };
+                    }
+                }
+                
+                if (currentUnit.text) {
+                    units.push(currentUnit);
+                }
+                
+                return units;
+            }
+            
+            // 6. 基于节奏的分段（新增）
+            function rhythmBasedSegmentation(text) {
+                const rhythmPattern = analyzeRhythmPattern(text);
+                const segments = [];
+                let currentSegment = '';
+                let rhythmScore = 0;
+                
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    currentSegment += char;
+                    
+                    // 更新节奏分数
+                    rhythmScore = updateRhythmScore(char, rhythmScore, rhythmPattern);
+                    
+                    // 在节奏停顿点分割
+                    if (shouldSplitAtRhythmPoint(char, rhythmScore, currentSegment)) {
+                        segments.push(currentSegment);
+                        currentSegment = '';
+                        rhythmScore = 0;
+                    }
+                }
+                
+                if (currentSegment) {
+                    segments.push(currentSegment);
+                }
+                
+                return balanceRhythmSegments(segments, rhythmPattern);
+            }
+            
+            // 辅助函数
+            function optimizeSegments(segments) {
+                // 智能合并过短段落
+                const optimized = [];
+                let tempSegment = '';
+                
+                for (const segment of segments) {
+                    if (tempSegment.length + segment.length < 8 && !/[。！？]$/.test(tempSegment)) {
+                        tempSegment += segment;
+                    } else {
+                        if (tempSegment) optimized.push(tempSegment);
+                        tempSegment = segment;
+                    }
+                }
+                
+                if (tempSegment) optimized.push(tempSegment);
+                
+                return optimized;
+            }
+            
+            function calculateTextComplexity(text) {
+                // 计算文本复杂度的简化版本
+                const uniqueChars = new Set(text).size;
+                const totalChars = text.length;
+                const avgWordLength = text.split(/\s+/).reduce((sum, word) => sum + word.length, 0) / text.split(/\s+/).length;
+                
+                return Math.min(1, (uniqueChars / totalChars + avgWordLength / 10) / 2);
+            }
+            
+            function getCharTone(char) {
+                // 简化的声调检测
+                const toneMap = {
+                    'ā': '平', 'á': '平', 'ǎ': '平', 'à': '平',
+                    'ē': '平', 'é': '平', 'ě': '平', 'è': '平',
+                    'ī': '平', 'í': '平', 'ǐ': '平', 'ì': '平',
+                    'ō': '平', 'ó': '平', 'ǒ': '平', 'ò': '平',
+                    'ū': '平', 'ú': '平', 'ǔ': '平', 'ù': '平'
+                };
+                
+                return toneMap[char] || null;
+            }
+            
+            function getToneWeight(tone) {
+                return tone === '平' ? 1 : -1;
+            }
+            
+            function isChineseChar(char) {
+                return /[\u4e00-\u9fa5]/.test(char);
+            }
+            
+            function isPartOfComplexExpression(char, nextChar) {
+                const complexPatterns = [
+                    ['因为', '所以'],
+                    ['虽然', '但是'],
+                    ['如果', '那么'],
+                    ['不但', '而且'],
+                    ['不仅', '还']
+                ];
+                
+                for (const pattern of complexPatterns) {
+                    for (let i = 0; i < pattern.length - 1; i++) {
+                        if (char === pattern[i][pattern[i].length - 1] && 
+                            nextChar === pattern[i + 1][0]) {
+                            return true;
+                        }
+                    }
+                }
+                
+                return false;
+            }
+            
+            // 更多辅助函数...
+            function isStressedWord(char, nextChar) {
+                return /[重要关键核心主要]/.test(char);
+            }
+            
+            function isRhythmBoundary(char, nextChar) {
+                return /[的了在是有和与及或]/.test(char) && !/[a-zA-Z0-9]/.test(nextChar);
+            }
+            
+            function detectTextType(text) {
+                // 确保文本不为空
+                if (!text || text.trim().length === 0) {
+                    return 'general';
+                }
+                
+                const hasQuestion = /[？]/.test(text);
+                const hasExclamation = /[！]/.test(text);
+                const technicalTerms = (text.match(/[技术系统方法算法数据]/g) || []).length;
+                const sentences = text.split(/[。！？]/).filter(s => s.trim().length > 0);
+                const avgSentenceLength = sentences.length > 0 ? 
+                    sentences.reduce((sum, s) => sum + s.length, 0) / sentences.length : 10;
+                
+                if (technicalTerms > 3) return 'technical';
+                if (hasQuestion && hasExclamation && avgSentenceLength < 15) return 'conversation';
+                if (avgSentenceLength > 25) return 'formal';
+                if (/[诗词歌赋]/.test(text)) return 'poetry';
+                
+                return 'general';
+            }
+            
+            function calculatePunctuationDensity(segment) {
+                const punctuationCount = (segment.match(/[。，；：！？]/g) || []).length;
+                return punctuationCount / segment.length;
+            }
+            
+            function calculateSegmentLength(speechRate) {
+                if (speechRate < 0.5) return 8;
+                if (speechRate < 1.0) return 12;
+                if (speechRate < 1.5) return 16;
+                return 22;
+            }
+            
+            function calculateSplitSensitivity(pitch) {
+                return 0.5 + pitch * 0.3;
+            }
+            
+            function calculateMergeThreshold(volume) {
+                return 10 - volume * 3;
+            }
+            
+            function calculateRealTimeFactor(speechRate, pitch, volume) {
+                return (speechRate + pitch + volume) / 3;
+            }
+            
+            function updateContextScore(char, currentScore, params) {
+                let newScore = currentScore;
+                
+                if (/[，。！？]/.test(char)) {
+                    newScore += params.splitSensitivity * 5;
+                } else if (/[的了在是有]/.test(char)) {
+                    newScore += params.splitSensitivity * 2;
+                }
+                
+                return Math.max(0, newScore - 0.1);
+            }
+            
+            function shouldSplitInContext(segment, char, nextChar, contextScore, params) {
+                const lengthFactor = segment.length / params.targetLength;
+                const contextFactor = contextScore / 10;
+                
+                return (lengthFactor >= 1 || contextFactor >= 1) && 
+                       /[，。！？；：的了在是有和与及或]/.test(char) &&
+                       !/[a-zA-Z0-9]/.test(nextChar);
+            }
+            
+            function classifySemanticUnit(text) {
+                if (/[因为所以如果那么]/.test(text)) return 'logic';
+                if (/[的得地]/.test(text)) return 'modifier';
+                if (/[和与及或]/.test(text)) return 'conjunction';
+                return 'content';
+            }
+            
+            function calculateSemanticImportance(text) {
+                const importantWords = (text.match(/[重要关键核心主要]/g) || []).length;
+                return Math.min(1, importantWords / text.length * 10);
+            }
+            
+            function isSemanticBoundary(char, text) {
+                return /[。！？，、；：]/.test(char) ||
+                       (/[的了在是有和与及或]/.test(char) && text.length >= 5);
+            }
+            
+            function analyzeRhythmPattern(text) {
+                // 简化的节奏分析
+                return {
+                    pattern: 'regular',
+                    intensity: 0.5,
+                    tempo: 1.0
+                };
+            }
+            
+            function updateRhythmScore(char, currentScore, pattern) {
+                return currentScore + pattern.intensity;
+            }
+            
+            function shouldSplitAtRhythmPoint(char, rhythmScore, segment) {
+                return rhythmScore > 3 && /[，。！？]/.test(char) && segment.length >= 8;
+            }
+            
+            function balanceProsodySegments(segments) {
+                return segments;
+            }
+            
+            function balanceRhythmSegments(segments, pattern) {
+                return segments;
+            }
+            
+            function optimizeSegmentation(segments, strategy) {
+                // 智能优化分段结果
+                const optimized = [];
+                let tempSegment = '';
+                
+                for (let i = 0; i < segments.length; i++) {
+                    const segment = segments[i];
+                    
+                    // 如果当前段落太短且不是句末，尝试与下一段合并
+                    if (segment.length < strategy.minLength && 
+                        i < segments.length - 1 && 
+                        !/[。！？]$/.test(segment) &&
+                        tempSegment.length + segment.length < strategy.maxLength) {
+                        tempSegment += segment;
+                    } else {
+                        // 如果有临时段落，先添加
+                        if (tempSegment) {
+                            optimized.push(tempSegment);
+                            tempSegment = '';
+                        }
+                        
+                        // 检查当前段落是否需要进一步分割
+                        if (segment.length > strategy.maxLength) {
+                            const splitSegments = splitLongSegment(segment, strategy);
+                            optimized.push(...splitSegments);
+                        } else {
+                            optimized.push(segment);
+                        }
+                    }
+                }
+                
+                // 添加剩余的临时段落
+                if (tempSegment) {
+                    optimized.push(tempSegment);
+                }
+                
+                return optimized;
+            }
+            
+            function performPrimarySegmentation(text, strategy) {
+                const segments = [];
+                let currentSegment = '';
+                
+                // 使用正则表达式找到所有可能的分割点
+                const splitRegex = /[。！？，、；：]/g;
+                let match;
+                let lastIndex = 0;
+                
+                while ((match = splitRegex.exec(text)) !== null) {
+                    const splitIndex = match.index;
+                    const splitChar = match[0];
+                    
+                    // 获取分割点前的文本
+                    const segmentText = text.substring(lastIndex, splitIndex + 1);
+                    
+                    // 根据策略决定是否在此处分段
+                    if (shouldSplitAtPoint(segmentText, splitChar, strategy)) {
+                        if (currentSegment) {
+                            currentSegment += segmentText;
+                            // 如果当前段落达到合适长度，添加到结果中
+                            if (currentSegment.length >= strategy.baseSegmentLength) {
+                                segments.push(currentSegment);
+                                currentSegment = '';
+                            }
+                        } else {
+                            // 如果是句末标点或段落足够长，直接分段
+                            if (/[。！？]/.test(splitChar) || segmentText.length >= strategy.baseSegmentLength) {
+                                segments.push(segmentText);
+                            } else {
+                                currentSegment = segmentText;
+                            }
+                        }
+                    } else {
+                        // 不分段，继续累积
+                        currentSegment += segmentText;
+                    }
+                    
+                    lastIndex = splitIndex + 1;
+                }
+                
+                // 处理剩余文本
+                if (lastIndex < text.length) {
+                    const remainingText = text.substring(lastIndex);
+                    if (currentSegment) {
+                        currentSegment += remainingText;
+                    } else {
+                        currentSegment = remainingText;
+                    }
+                }
+                
+                // 添加最后一段
+                if (currentSegment) {
+                    segments.push(currentSegment);
+                }
+                
+                // 如果没有分段，将整个文本作为一段
+                if (segments.length === 0) {
+                    segments.push(text);
+                }
+                
+                return segments;
+            }
+            
+            // 判断是否应该在特定点分割
+            function shouldSplitAtPoint(segmentText, splitChar, strategy) {
+                // 句末标点总是分割
+                if (/[。！？]/.test(splitChar)) {
+                    return true;
+                }
+                
+                // 分句标点根据长度决定
+                if (/[，、；：]/.test(splitChar)) {
+                    return segmentText.length >= strategy.baseSegmentLength * 0.8;
+                }
+                
+                // 其他情况根据文本长度决定
+                return segmentText.length >= strategy.maxLength;
+            }
+            
+            // 分割过长的段落
+            function splitLongSegment(segment, strategy) {
+                const segments = [];
+                let currentSegment = '';
+                
+                for (let i = 0; i < segment.length; i++) {
+                    const char = segment[i];
+                    currentSegment += char;
+                    
+                    // 在合适的分割点进行分段
+                    if (/[，。！？、；：]/.test(char) && 
+                        currentSegment.length >= strategy.baseSegmentLength) {
+                        segments.push(currentSegment);
+                        currentSegment = '';
+                    } else if (currentSegment.length >= strategy.maxLength) {
+                        // 强制分割
+                        segments.push(currentSegment);
+                        currentSegment = '';
+                    }
+                }
+                
+                // 添加剩余部分
+                if (currentSegment) {
+                    segments.push(currentSegment);
+                }
+                
+                return segments.length > 0 ? segments : [segment];
+            }
+            
+            function buildSemanticGraph(units) {
+                return { units, connections: [] };
+            }
+            
+            function segmentBySemanticBoundaries(graph) {
+                return graph.units.map(unit => unit.text);
+            }
+            
+            function optimizeSemanticSegments(segments) {
+                return segments;
+            }
+            
+            function calculateAvgSentenceLength(text) {
+                // 确保文本不为空
+                if (!text || text.trim().length === 0) {
+                    return 10;
+                }
+                
+                const sentences = text.split(/[。！？]/).filter(s => s.trim());
+                if (sentences.length === 0) {
+                    return text.length; // 如果没有句末标点，返回整个文本的长度
+                }
+                
+                return sentences.reduce((sum, s) => sum + s.length, 0) / sentences.length;
+            }
+            
+            function analyzePunctuationPattern(text) {
+                return { density: calculatePunctuationDensity(text) };
+            }
+            
+            function calculateSemanticDensity(text) {
+                return 0.5; // 简化实现
+            }
+            
+            function detectFormalLevel(text) {
+                const formalWords = (text.match(/[因此然而此外综上所述]/g) || []).length;
+                return formalWords > 2 ? 'high' : 'medium';
+            }
+            
+            // 朗读当前段落的函数
+            function speakCurrentSegment() {
+                if (currentSegmentIndex >= textSegments.length) {
+                    // 朗读完成
+                    isSpeaking = false;
+                    currentUtterance = null;
+                    const strategy = getCurrentSegmentationStrategy();
+                    const strategyName = getSegmentationStrategyName(strategy);
+                    status.textContent = `朗读完成 | ${strategyName} | 共${textSegments.length}段`;
+                    status.classList.remove('speaking');
+                    speakBtn.disabled = false;
+                    pauseBtn.disabled = true;
+                    pauseBtn.textContent = '暂停';
+                    isPaused = false;
+                    return;
+                }
+                
+                const segment = textSegments[currentSegmentIndex];
+                currentUtterance = new SpeechSynthesisUtterance(segment);
+                currentUtterance.voice = voices[voiceSelect.value];
+                currentUtterance.pitch = pitchRange.value;
+                currentUtterance.rate = rateRange.value;
+                currentUtterance.volume = volumeRange.value;
+                
+                currentUtterance.onstart = () => {
+                    currentPosition += segment.length;
+                    const strategy = getCurrentSegmentationStrategy();
+                    const strategyName = getSegmentationStrategyName(strategy);
+                    status.textContent = `正在朗读... | ${strategyName} | 第${currentSegmentIndex + 1}/${textSegments.length}段`;
+                    status.classList.add('speaking');
+                };
+                
+                currentUtterance.onend = () => {
+                    currentSegmentIndex++;
+                    // 使用 setTimeout 延迟检查，确保状态正确更新
+                    setTimeout(() => {
+                        // 检查是否需要切换策略
+                        if (pendingStrategySwitch && currentText) {
+                            // 执行策略切换
+                            const strategy = getCurrentSegmentationStrategy();
+                            const strategyName = getSegmentationStrategyName(strategy);
+                            
+                            // 确保 currentPosition 不超过文本长度
+                            if (currentPosition > currentText.length) {
+                                currentPosition = currentText.length;
+                            }
+                            
+                            // 计算剩余文本
+                            const remainingText = currentText.substring(currentPosition);
+                            
+                            // 使用新策略对剩余文本重新分段
+                            textSegments = splitTextIntoSegments(remainingText);
+                            currentSegmentIndex = 0;
+                            
+                            // 清除切换标志
+                            pendingStrategySwitch = false;
+                            
+                            // 更新状态栏
+                            status.textContent = `已切换到${strategyName} | 第${currentSegmentIndex + 1}/${textSegments.length}段`;
+                            status.classList.add('speaking');
+                            
+                            // 开始朗读新策略的第一段
+                            if (isSpeaking && !isPaused) {
+                                speakCurrentSegment();
+                            }
+                        } else if (isSpeaking && !isPaused && currentSegmentIndex < textSegments.length) {
+                            // 正常继续下一段
+                            speakCurrentSegment();
+                        } else if (currentSegmentIndex >= textSegments.length) {
+                            // 朗读完成
+                            isSpeaking = false;
+                            currentUtterance = null;
+                            const strategy = getCurrentSegmentationStrategy();
+                            const strategyName = getSegmentationStrategyName(strategy);
+                            status.textContent = `朗读完成 | ${strategyName} | 共${textSegments.length}段`;
+                            status.classList.remove('speaking');
+                            speakBtn.disabled = false;
+                            pauseBtn.disabled = true;
+                            pauseBtn.textContent = '暂停';
+                            isPaused = false;
+                        }
+                    }, 10);
+                };
+                
+                currentUtterance.onerror = (event) => {
+                    isSpeaking = false;
+                    currentUtterance = null;
+                    const strategy = getCurrentSegmentationStrategy();
+                    const strategyName = getSegmentationStrategyName(strategy);
+                    status.textContent = `朗读出错: ${event.error} | ${strategyName} | 共${textSegments.length}段`;
+                    status.classList.remove('speaking');
+                    speakBtn.disabled = false;
+                    pauseBtn.disabled = true;
+                    pauseBtn.textContent = '暂停';
+                    isPaused = false;
+                };
+                
+                synth.speak(currentUtterance);
+            }
+            
+            // 更新语音参数的函数 - 实时应用而不重新开始
+            function updateUtteranceParameters() {
+                if (currentUtterance && isSpeaking) {
+                    // 直接更新当前朗读对象的参数
+                    currentUtterance.voice = voices[voiceSelect.value];
+                    currentUtterance.pitch = pitchRange.value;
+                    currentUtterance.rate = rateRange.value;
+                    currentUtterance.volume = volumeRange.value;
+                }
+            }
+            
+            // 开始朗读
+            speakBtn.addEventListener('click', () => {
+                if (isSpeaking && !isPaused) {
+                    return;
+                }
+                
+                if (hanziInput.value.trim() !== '') {
+                    // 如果是从暂停状态恢复，继续当前段落
+                    if (isPaused) {
+                        synth.resume();
+                        isPaused = false;
+                        pauseBtn.textContent = '暂停';
+                        status.textContent = '正在朗读...';
+                        status.classList.add('speaking');
+                        return;
+                    }
+                    
+                    // 初始化朗读状态
+                    currentText = hanziInput.value;
+                    currentVoiceIndex = voiceSelect.value;
+                    textSegments = splitTextIntoSegments(currentText);
+                    currentSegmentIndex = 0;
+                    currentPosition = 0;
+                    
+                    isSpeaking = true;
+                    const strategy = getCurrentSegmentationStrategy();
+                    const strategyName = getSegmentationStrategyName(strategy);
+                    status.textContent = `正在朗读... | ${strategyName} | 共${textSegments.length}段`;
+                    status.classList.add('speaking');
+                    speakBtn.disabled = true;
+                    pauseBtn.disabled = false;
+                    pauseBtn.textContent = '暂停';
+                    isPaused = false;
+                    
+                    // 开始朗读第一段
+                    speakCurrentSegment();
+                } else {
+                    status.textContent = '请输入要朗读的文本';
+                }
+            });
+            
+            // 暂停/继续朗读
+            pauseBtn.addEventListener('click', () => {
+                if (isPaused) {
+                    // 继续播放 - 从当前段落继续
+                    synth.resume();
+                    isPaused = false;
+                    pauseBtn.textContent = '暂停';
+                    const strategy = getCurrentSegmentationStrategy();
+                    const strategyName = getSegmentationStrategyName(strategy);
+                    status.textContent = `正在朗读... | ${strategyName} | 第${currentSegmentIndex + 1}/${textSegments.length}段`;
+                    status.classList.add('speaking');
+                    
+                    // 如果当前段落已经读完，立即继续下一段
+                    if (!synth.speaking && isSpeaking && !isPaused) {
+                        speakCurrentSegment();
+                    }
+                } else {
+                    // 暂停播放
+                    if (synth.speaking) {
+                        synth.pause();
+                        isPaused = true;
+                        pauseBtn.textContent = '继续';
+                        const strategy = getCurrentSegmentationStrategy();
+                        const strategyName = getSegmentationStrategyName(strategy);
+                        status.textContent = `已暂停朗读 | ${strategyName} | 第${currentSegmentIndex + 1}/${textSegments.length}段`;
+                        status.classList.remove('speaking');
+                    }
+                }
+            });
+            
+            // 停止朗读
+            stopBtn.addEventListener('click', () => {
+                if (synth.speaking || synth.paused) {
+                    synth.cancel();
+                    isSpeaking = false;
+                    isPaused = false;
+                    pendingStrategySwitch = false; // 清除策略切换标志
+                    currentUtterance = null;
+                    const segmentCount = textSegments.length;
+                    textSegments = [];
+                    currentSegmentIndex = 0;
+                    currentPosition = 0;
+                    pauseBtn.textContent = '暂停';
+                    pauseBtn.disabled = true;
+                    const strategy = getCurrentSegmentationStrategy();
+                    const strategyName = getSegmentationStrategyName(strategy);
+                    status.textContent = `已停止朗读 | ${strategyName} | 共${segmentCount}段`;
+                    status.classList.remove('speaking');
+                    speakBtn.disabled = false;
+                    // 更新分段数量显示
+                    updateSegmentCount();
+                }
+            });
+            
+            // 监听语音参数变化，实时更新朗读
+            pitchRange.addEventListener('input', () => {
+                pitchValue.textContent = pitchRange.value;
+                updateUtteranceParameters();
+            });
+            
+            pitchRange.addEventListener('change', () => {
+                pitchValue.textContent = pitchRange.value;
+                updateUtteranceParameters();
+            });
+            
+            rateRange.addEventListener('input', () => {
+                rateValue.textContent = rateRange.value;
+                updateUtteranceParameters();
+            });
+            
+            rateRange.addEventListener('change', () => {
+                rateValue.textContent = rateRange.value;
+                updateUtteranceParameters();
+            });
+            
+            volumeRange.addEventListener('input', () => {
+                volumeValue.textContent = volumeRange.value;
+                updateUtteranceParameters();
+            });
+            
+            volumeRange.addEventListener('change', () => {
+                volumeValue.textContent = volumeRange.value;
+                updateUtteranceParameters();
+            });
+            
+            // 监听分段策略变化
+            document.querySelectorAll('input[name="segmentation"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    const strategy = getCurrentSegmentationStrategy();
+                    const strategyName = getSegmentationStrategyName(strategy);
+                    showToast(`已切换到${strategyName}`, 'success');
+                    updateSegmentCount();
+                    
+                    // 如果正在朗读，标记需要在当前段落读完后切换策略
+                    if (isSpeaking && currentText) {
+                        pendingStrategySwitch = true;
+                        status.textContent = `正在读完当前段落，即将切换到${strategyName}...`;
+                    }
+                });
+            });
+            
+            voiceSelect.addEventListener('change', () => {
+                updateSelectedVoiceDisplay();
+                updateUtteranceParameters();
+            });
+            
+            // 初始化语音选择
+            initVoiceSelect();
+            
+            // 初始化撤销/反撤销按钮状态
+            updateButtonStates();
+            
+            // 初始化当前内容
+            currentContent = hanziInput.value;
+            
+            // 初始化分段数量显示
+            updateSegmentCount();
+            
+            // 监听语音列表变化
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = loadVoices;
+            }
+            
+            // 多次尝试加载，确保语音列表完全加载
+            let loadAttempts = 0;
+            const maxAttempts = 10;
+            const loadInterval = setInterval(() => {
+                loadAttempts++;
+                if (synth.getVoices().length > 0 || loadAttempts >= maxAttempts) {
+                    clearInterval(loadInterval);
+                    loadVoices();
+                }
+            }, 200);
+            
+            // 自定义下拉框交互
+            const selectTrigger = document.getElementById('select-trigger');
+            const selectOptions = document.getElementById('select-options');
+            const arrow = document.querySelector('.arrow');
+            
+            // 点击触发器显示/隐藏选项
+            selectTrigger.addEventListener('click', () => {
+                const isShowing = selectOptions.classList.contains('show');
+                if (isShowing) {
+                    selectOptions.classList.remove('show');
+                    selectTrigger.classList.remove('active');
+                    arrow.classList.remove('up');
+                } else {
+                    selectOptions.classList.add('show');
+                    selectTrigger.classList.add('active');
+                    arrow.classList.add('up');
+                }
+            });
+            
+            // 点击选项选择语音
+            document.addEventListener('click', (event) => {
+                if (event.target.classList.contains('select-option')) {
+                    const value = event.target.getAttribute('data-value');
+                    voiceSelect.value = value;
+                    updateSelectedVoiceDisplay();
+                    
+                    // 关闭下拉框
+                    selectOptions.classList.remove('show');
+                    selectTrigger.classList.remove('active');
+                    arrow.classList.remove('up');
+                }
+            });
+            
+            // 点击外部关闭下拉框
+            document.addEventListener('click', (event) => {
+                if (!event.target.closest('.custom-select')) {
+                    selectOptions.classList.remove('show');
+                    selectTrigger.classList.remove('active');
+                    arrow.classList.remove('up');
+                }
+            });
+            
+            // ==================== 下载文件功能 ====================
+            window.downloadFile = function(filePath, fileName) {
+                console.log('[下载] 下载文件:', filePath, fileName);
+                
+                // 创建下载链接
+                const a = document.createElement('a');
+                a.href = filePath;
+                a.download = fileName;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                
+                // 触发下载
+                a.click();
+                
+                // 清理
+                document.body.removeChild(a);
+                
+                console.log('[下载] 下载完成');
+            };
+        } else {
+            document.getElementById('status').textContent = '抱歉，您的浏览器不支持语音合成功能。';
+            document.getElementById('speak-btn').disabled = true;
+            document.getElementById('pause-btn').disabled = true;
+            document.getElementById('stop-btn').disabled = true;
+        }
+        
+        // ==================== 拼音转换功能（不依赖语音合成，移到外面） ====================
+        // 显示Toast提示
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            
+            // 根据类型添加图标
+            let icon = '';
+            switch(type) {
+                case 'success':
+                    icon = '🌟 ';
+                    break;
+                case 'error':
+                    icon = '⚠️ ';
+                    break;
+                default:
+                    icon = '💡 ';
+            }
+            
+            toast.innerHTML = `<span style="display: flex; align-items: center; gap: 6px;">${icon}${message}</span>`;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 更新显示
+        function updateDisplay() {
+            if (currentContent) {
+                hanziInput.value = currentContent;
+            } else {
+                hanziInput.value = '';
+            }
+            
+            // 更新按钮状态
+            updateButtonStates();
+            
+            // 更新拼音转换
+            if (typeof convert === 'function') {
+                convert();
+            }
+        }
+        
+        // 更新按钮状态
+        function updateButtonStates() {
+            // 根据栈的状态启用/禁用按钮
+            undoBtn.disabled = undoStack.length === 0;
+            redoBtn.disabled = redoStack.length === 0;
+        }
+        
+        // 撤销操作
+        function undo() {
+            if (undoStack.length === 0) {
+                showToast('没有可撤销的操作', 'error');
+                return;
+            }
+            
+            // 将当前内容添加到重做栈
+            redoStack.push(currentContent);
+            
+            // 从撤销栈中取出上一个内容
+            currentContent = undoStack.pop();
+            
+            // 更新显示
+            updateDisplay();
+            
+            showToast('已撤销', 'success');
+        }
+        
+        // 反撤销操作
+        function redo() {
+            if (redoStack.length === 0) {
+                showToast('没有可重做的操作', 'error');
+                return;
+            }
+            
+            // 将当前内容添加到撤销栈
+            undoStack.push(currentContent);
+            
+            // 从重做栈中取出下一个内容
+            currentContent = redoStack.pop();
+            
+            // 更新显示
+            updateDisplay();
+            
+            showToast('已重做', 'success');
+        }
+        
+        // 文件加载功能（拼音转换）
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (file) {
+                const pinyinDisplay = document.getElementById('pinyin-display');
+                
+                // 显示读取中状态
+                status.textContent = '正在读取文件...';
+                pinyinDisplay.innerHTML = '<div style="text-align: center; color: #667eea; padding: 20px;"><i style="font-size: 24px; display: block; margin-bottom: 10px;">⏳</i>正在读取文件...</div>';
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const fileContent = e.target.result;
+                    
+                    // 保存当前内容到撤销栈
+                    if (currentContent !== undefined && currentContent !== fileContent) {
+                        undoStack.push(currentContent);
+                        if (undoStack.length > 50) {
+                            undoStack.shift();
+                        }
+                        redoStack = [];
+                        updateButtonStates();
+                    }
+                    
+                    // 设置新内容到输入框
+                    hanziInput.value = fileContent;
+                    currentContent = fileContent;
+                    
+                    // 立即触发转换
+                    // 清除之前的定时器
+                    if (typingTimer) {
+                        clearTimeout(typingTimer);
+                    }
+                    
+                    // 设置新的定时器，延迟执行转换（TYPING_DELAY = 30ms）
+                    typingTimer = setTimeout(() => {
+                        convert();
+                    }, TYPING_DELAY);
+                    
+                    status.textContent = `已成功加载文件: ${file.name} (${fileContent.length} 字)`;
+                    showToast(`文件加载成功，共 ${fileContent.length} 字`, 'success');
+                };
+                reader.onerror = function() {
+                    status.textContent = '文件读取失败，请重试';
+                    pinyinDisplay.innerHTML = '<span style="color: red;">文件读取失败，请重试</span>';
+                    showToast('文件读取失败', 'error');
+                };
+                reader.readAsText(file, 'UTF-8');
+            }
+        });
+        
+        // 监听输入框变化（实时转换）
+        hanziInput.addEventListener('input', function(e) {
+            // 清除之前的定时器
+            if (typingTimer) {
+                clearTimeout(typingTimer);
+            }
+            
+            // 设置新的定时器，延迟执行转换
+            typingTimer = setTimeout(() => {
+                convert();
+            }, TYPING_DELAY);
+            
+            // 更新虚拟光标
+            setTimeout(updateVirtualCursor, 10);
+        });
+        
+        // 监听滚动事件，保持拼音显示和输入框同步
+        hanziInput.addEventListener('scroll', function() {
+            const pinyinDisplay = document.getElementById('pinyin-display');
+            pinyinDisplay.scrollTop = this.scrollTop;
+            pinyinDisplay.scrollLeft = this.scrollLeft;
+        });
+        
+        // 虚拟光标同步逻辑
+        function updateVirtualCursor() {
+            const virtualCursor = document.getElementById('virtual-cursor');
+            const pinyinDisplay = document.getElementById('pinyin-display');
+            
+            try {
+                const cursorPos = hanziInput.selectionStart;
+                const textBeforeCursor = hanziInput.value.substring(0, cursorPos);
+                
+                // 创建一个与输入框完全相同的div来测量
+                const measurer = document.createElement('div');
+                
+                // 直接复制输入框的所有样式
+                const inputStyle = window.getComputedStyle(hanziInput);
+                for (let prop of inputStyle) {
+                    measurer.style[prop] = inputStyle[prop];
+                }
+                
+                // 设置测量元素的位置和可见性
+                measurer.style.position = 'absolute';
+                measurer.style.visibility = 'hidden';
+                measurer.style.left = '-9999px';
+                measurer.style.top = '-9999px';
+                measurer.style.width = hanziInput.offsetWidth + 'px';
+                measurer.style.height = hanziInput.offsetHeight + 'px';
+                measurer.style.overflow = 'auto';
+                measurer.style.whiteSpace = 'pre-wrap';
+                measurer.style.wordWrap = 'break-word';
+                
+                // 设置内容
+                measurer.textContent = textBeforeCursor;
+                document.body.appendChild(measurer);
+                
+                // 滚动到与输入框相同的位置
+                measurer.scrollTop = hanziInput.scrollTop;
+                measurer.scrollLeft = hanziInput.scrollLeft;
+                
+                // 创建一个光标标记元素
+                const cursorMarker = document.createElement('span');
+                cursorMarker.textContent = '|';
+                cursorMarker.style.color = 'red';
+                measurer.appendChild(cursorMarker);
+                
+                // 获取光标标记的位置
+                const markerRect = cursorMarker.getBoundingClientRect();
+                const measurerRect = measurer.getBoundingClientRect();
+                
+                // 计算相对于输入框的位置
+                const relativeLeft = markerRect.left - measurerRect.left;
+                const relativeTop = markerRect.top - measurerRect.top;
+                
+                // 设置虚拟光标位置
+                virtualCursor.style.left = relativeLeft + 'px';
+                virtualCursor.style.top = relativeTop + 'px';
+                virtualCursor.style.display = 'block';
+                virtualCursor.style.backgroundColor = '#333';
+                virtualCursor.style.height = (parseFloat(inputStyle.lineHeight) || 20) + 'px';
+                
+                // 清理
+                document.body.removeChild(measurer);
+            } catch (e) {
+                console.error('获取光标位置失败:', e);
+                virtualCursor.style.display = 'none';
+            }
+        }
+        
+        // 监听光标位置变化
+        hanziInput.addEventListener('click', updateVirtualCursor);
+        hanziInput.addEventListener('keyup', updateVirtualCursor);
+        hanziInput.addEventListener('keydown', updateVirtualCursor);
+        hanziInput.addEventListener('focus', updateVirtualCursor);
+        hanziInput.addEventListener('blur', function() {
+            document.getElementById('virtual-cursor').style.display = 'none';
+        });
+        
+        // 初始化虚拟光标
+        setTimeout(updateVirtualCursor, 500);
+        
+        // 撤销和反撤销按钮事件监听
+        undoBtn.addEventListener('click', undo);
+        redoBtn.addEventListener('click', redo);
+        
+        // 监听键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+Z 撤销
+            if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                undo();
+            }
+            // Ctrl+Shift+Z 或 Ctrl+Y 反撤销
+            else if ((e.ctrlKey && e.shiftKey && e.key === 'Z') || (e.ctrlKey && e.key === 'y')) {
+                e.preventDefault();
+                redo();
+            }
+        });
+        
+        // 拼音缓存
+        const pinyinCache = new Map();
+        let processingTimeout = null;
+        
+        // 防抖函数
+        function debounce(func, wait) {
+            return function(...args) {
+                clearTimeout(processingTimeout);
+                processingTimeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+        
+        // 实时拼音转换相关变量（完全来自 realtime_pinyin_converter.html）
+        let currentTab = 'ruby';
+        let currentResult = '';
+        let typingTimer = null;
+        const TYPING_DELAY = 30; // 打字延迟（毫秒）
+
+        // 切换标签页
+        function switchTab(element, tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
+            currentTab = tab;
+            
+            // 如果有输入内容，立即更新
+            if (document.getElementById('hanziInput').value.trim()) {
+                convert();
+            }
+        }
+
+        // 实时转换函数（优化版 - 异步处理）
+        function convert() {
+            const input = document.getElementById('hanziInput').value.trim();
+            const resultDiv = document.getElementById('pinyin-display');
+            
+            if (!input) {
+                resultDiv.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">请在上方输入文字，拼音将实时显示</p>';
+                currentResult = '';
+                return;
+            }
+
+            const toneType = document.querySelector('input[name="toneType"]:checked').value;
+            const keepSpace = document.getElementById('space').checked;
+            const firstLetter = document.getElementById('firstLetter').checked;
+
+// ✅ 性能优化：使用 type: 'array' 代替 'all'，性能提升几十倍
+                    const options = {
+                        pattern: 'pinyin',
+                        toneType: toneType,
+                        type: 'array', // 关键优化：返回字符串数组，而不是对象数组
+                        v: true,
+                        nonZh: 'removed', // 始终移除非中文字符的拼音，包括标点符号
+                        separator: '',
+                        mode: 'normal'
+                    };
+
+            // 根据首字母选项调整
+            if (firstLetter) {
+                options.pattern = 'first';
+            }
+
+            // ✅ 立即返回，不阻塞主线程
+            setTimeout(() => {
+                try {
+                    // 判断是否需要分批处理
+                    if (input.length > 100000) {
+                        // 超大文本（>10万字）：分批处理
+                        convertWithBatchProcessing(input, options, false);
+                    } else {
+                        // 中小文本（<10万字）：直接处理
+                        const result = pinyinPro.pinyin(input, options);
+                        currentResult = result;
+                        
+                        // ✅ 渲染也异步
+                        setTimeout(() => {
+                            displayRubyResult(input, result, options);
+                        }, 0);
+                    }
+                } catch (error) {
+                    console.error('转换错误:', error);
+                    resultDiv.innerHTML = '<span style="color: red;">转换失败：' + error.message + '</span>';
+                }
+            }, 0);
+        }
+
+        // 超大文本分批处理
+        function convertWithBatchProcessing(input, options, arrayFormat) {
+            const resultDiv = document.getElementById('pinyin-display');
+            const BATCH_SIZE = 80000; // 8万一批
+            
+            // 显示进度提示
+            resultDiv.innerHTML = '<div style="text-align: center; color: #667eea; padding: 20px;"><i style="font-size: 24px; display: block; margin-bottom: 10px;">⏳</i>正在转换中...（共 ' + input.length + ' 字）</div>';
+            
+            const totalChunks = Math.ceil(input.length / BATCH_SIZE);
+            const results = new Array(totalChunks);
+            let completed = 0;
+            
+            function processChunk(chunkIndex) {
+                if (chunkIndex >= totalChunks) {
+                    // 所有批次完成，合并结果
+                    finishBatchProcessing(results, input, options, arrayFormat);
+                    return;
+                }
+                
+                const startIndex = chunkIndex * BATCH_SIZE;
+                const endIndex = Math.min(startIndex + BATCH_SIZE, input.length);
+                const chunk = input.slice(startIndex, endIndex);
+                
+                // 使用 setTimeout 让出主线程，避免阻塞 UI
+                setTimeout(() => {
+                    try {
+                        const chunkResult = pinyinPro.pinyin(chunk, options);
+                        results[chunkIndex] = chunkResult;
+                        completed++;
+                        
+                        // 更新进度提示（每5个批次更新一次，避免频繁 DOM 操作）
+                        if (chunkIndex % 5 === 0 || chunkIndex === totalChunks - 1) {
+                            const progress = Math.round((completed / totalChunks) * 100);
+                            resultDiv.innerHTML = `<div style="text-align: center; color: #667eea; padding: 20px;"><i style="font-size: 24px; display: block; margin-bottom: 10px;">⏳</i>正在转换中... ${progress}%</div>`;
+                        }
+                        
+                        // 处理下一批
+                        setTimeout(() => processChunk(chunkIndex + 1), 0);
+                    } catch (error) {
+                        console.error('批次转换错误:', error);
+                        resultDiv.innerHTML = '<span style="color: red;">转换失败：' + error.message + '</span>';
+                    }
+                }, 0);
+            }
+            
+            // 开始处理第一批
+            setTimeout(() => processChunk(0), 0);
+        }
+
+        // 完成分批处理
+        function finishBatchProcessing(results, input, options, arrayFormat) {
+            // 合并所有批次结果
+            const finalResult = results.flat();
+            currentResult = finalResult;
+            
+            // 使用 requestAnimationFrame 确保 DOM 更新在下一帧
+            requestAnimationFrame(() => {
+                displayRubyResult(input, finalResult, options);
+            });
+        }
+
+// ✅ 显示 Ruby 结果 - 高性能版本
+        function displayRubyResult(input, result, options) {
+            const resultDiv = document.getElementById('pinyin-display');
+            
+            // ✅ result 现在是字符串数组，对应 input 中的中文字符
+            if (!Array.isArray(result)) {
+                console.error('result 不是数组:', result);
+                return;
+            }
+            
+            // 获取"仅首字母"选项
+            const firstLetter = document.getElementById('firstLetter').checked;
+            
+            // ✅ 性能优化：直接构建 HTML 字符串，避免频繁 DOM 操作
+            const BATCH_SIZE = 10000; // 每批处理10000个字符
+            let currentIndex = 0;
+            let html = '';
+            let pinyinIndex = 0; // 跟踪拼音数组的索引
+            
+            // 清空显示
+            resultDiv.innerHTML = '';
+            
+            function processBatch() {
+                if (currentIndex >= input.length) {
+                    // 所有批次处理完成，一次性渲染
+                    resultDiv.innerHTML = html;
+                    return;
+                }
+                
+                const endIndex = Math.min(currentIndex + BATCH_SIZE, input.length);
+                
+                // ✅ 遍历 input 字符串，同时使用 pinyinIndex 跟踪拼音
+                for (let i = currentIndex; i < endIndex; i++) {
+                    const char = input[i];
+                    
+                    // 判断是否是中文字符
+                    if (/[\u4e00-\u9fa5]/.test(char)) {
+                        // 从结果数组中获取对应的拼音
+                        let pinyin = result[pinyinIndex] || '';
+                        pinyinIndex++;
+                        
+                        // 处理首字母
+                        if (firstLetter && pinyin) {
+                            pinyin = pinyin.charAt(0).toUpperCase();
+                        }
+                        
+                        // ✅ 使用 ruby 标签（高性能版本）
+                        html += `<ruby>${char}<rt>${pinyin}</rt></ruby>`;
+                    } else if (char === '\n') {
+                        html += '<br>';
+                    } else if (char === ' ') {
+                        if (document.getElementById('space').checked) {
+                            html += ' ';
+                        }
+                    } else {
+                        // 非中文字符（标点、数字、英文等）- 直接显示，不使用 ruby 标签
+                        switch(char) {
+                            case '<': html += '&lt;'; break;
+                            case '>': html += '&gt;'; break;
+                            case '&': html += '&amp;'; break;
+                            case '"': html += '&quot;'; break;
+                            case "'": html += '&#39;'; break;
+                            default: html += char;
+                        }
+                    }
+                }
+                
+                currentIndex = endIndex;
+                
+                // 使用 requestAnimationFrame 让出主线程
+                requestAnimationFrame(processBatch);
+            }
+            
+            // 开始处理
+            processBatch();
+        }
+
+        // 加载拼音库后初始化
+        loadPinyinPro().then(() => {
+            // 初始化完成后调用一次
+            convert();
+        });
+        
+        // 监听配置选项变化
+        document.querySelectorAll('input[name="toneType"], input[type="checkbox"]').forEach(element => {
+            element.addEventListener('change', function() {
+                if (document.getElementById('hanziInput').value.trim()) {
+                    convert();
+                }
+            });
+        });
+        
+        
+        
+                // 添加键盘事件支持
+        
+                document.getElementById('hanziInput').addEventListener('keydown', function(e) {
+        
+                    if (e.key === 'Enter' && e.ctrlKey) {
+        
+                        if (typeof convertHanzi === 'function') {
+        
+                            convertHanzi();
+        
+                        }
+        
+                    }
+        
+                });
+        
+        // 计算分割点权重（权重评分系统专用）
+        function calculateSplitScore(char, segment, position, fullText, prevChar, nextChar) {
+            let score = 0;
+            
+            // 1. 句末标点 - 最高权重
+            if (/[。！？]/.test(char)) {
+                score += 15;
+            }
+            // 省略号
+            else if (char === '…' || (char === '.' && nextChar === '.')) {
+                score += 12;
+            }
+            // 2. 分句标点 - 高权重
+            else if (/[，、；：]/.test(char)) {
+                score += 8;
+            }
+            // 3. 引号结束 - 中高权重
+            else if (/[\""''》）》】〕\]\}]/.test(char)) {
+                score += 7;
+            }
+            // 4. 语义停顿词 - 中等权重
+            else if (/[的了在是有和与及或但而因为所以如果那么虽然然而不过不过可是然而]/.test(char)) {
+                // 语义停顿词后分割，但确保不在复合词中
+                if (!isPartOfCompound(char, nextChar)) {
+                    score += 4;
+                }
+            }
+            // 5. 动词后分割 - 较低权重
+            else if (/[了着过]/.test(char) && isChineseChar(prevChar)) {
+                score += 3;
+            }
+            // 6. 空格分割 - 英文单词边界
+            else if (/\s/.test(char) && segment.trim().length > 0) {
+                score += 2;
+            }
+            // 7. 长度惩罚 - 避免过长段落
+            if (segment.length > 18) {
+                score += 5;
+            } else if (segment.length > 15) {
+                score += 3;
+            } else if (segment.length > 12) {
+                score += 1;
+            }
+            
+            // 8. 上下文调整
+            // 避免在英文单词中间分割
+            if (/[a-zA-Z0-9]/.test(nextChar)) {
+                score -= 8;
+            }
+            // 避免在数字中间分割
+            if (/[0-9]/.test(char) && /[0-9]/.test(nextChar)) {
+                score -= 6;
+            }
+            // 避免在时间表达式中分割
+            if (/[时分秒]/.test(char) && /[0-9]/.test(nextChar)) {
+                score -= 5;
+            }
+            
+            return Math.max(0, score);
+        }
+        
+        // 动态阈值计算（权重评分系统专用）
+        function getDynamicThreshold(segment, existingSegments) {
+            // 基础阈值
+            let threshold = 6;
+            
+            // 根据段落长度调整
+            if (segment.length < 5) {
+                threshold += 3; // 提高阈值，避免过短段落
+            } else if (segment.length > 20) {
+                threshold -= 2; // 降低阈值，鼓励分割
+            }
+            
+            // 根据已有段落数量调整
+            if (existingSegments.length > 10) {
+                threshold += 1; // 段落过多时提高阈值
+            }
+            
+            // 根据段落末尾字符调整
+            const lastChar = segment[segment.length - 1];
+            if (/[的]/.test(lastChar)) {
+                threshold += 1; // 避免在"的"后分割
+            }
+            
+            return threshold;
+        }
+        
+        // 检查是否为复合词的一部分（权重评分系统专用）
+        function isPartOfCompound(char, nextChar) {
+            const compounds = [
+                ['因为', '所以'],
+                ['虽然', '但是'],
+                ['如果', '那么'],
+                ['不但', '而且'],
+                ['不仅', '还']
+            ];
+            
+            for (const compound of compounds) {
+                for (let i = 0; i < compound.length - 1; i++) {
+                    if (char === compound[i][compound[i].length - 1] && 
+                        nextChar === compound[i + 1][0]) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+        
+        // 智能合并过短段落（权重评分系统专用）
+        function mergeShortSegments(segments) {
+            const mergedSegments = [];
+            let tempSegment = '';
+            
+            for (let i = 0; i < segments.length; i++) {
+                const segment = segments[i];
+                tempSegment += segment;
+                
+                // 合并条件
+                const shouldMerge = 
+                    tempSegment.length < 8 || // 当前段落过短
+                    (i < segments.length - 1 && segments[i + 1].length < 5); // 下一段过短
+                
+                // 如果遇到句末标点或达到合适长度，且不满足合并条件，则完成合并
+                if (!shouldMerge && (/[。！？]$/.test(tempSegment) || tempSegment.length >= 10)) {
+                    mergedSegments.push(tempSegment);
+                    tempSegment = '';
+                }
+            }
+            
+            // 添加剩余内容
+            if (tempSegment) {
+                mergedSegments.push(tempSegment);
+            }
+            
+            return mergedSegments.length > 0 ? mergedSegments : segments;
+        }
+    </script>
+</body>
+</html>
