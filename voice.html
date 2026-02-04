@@ -825,7 +825,7 @@
             
             <div class="input-group" style="margin-bottom: 20px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: bold;">选择文本文件：</label>
-                <input type="file" id="batch-file-input" accept=".txt" style="margin: 0 auto; display: block;" />
+                <input type="file" id="batch-file-input" accept="*" style="margin: 0 auto; display: block;" />
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
@@ -3126,31 +3126,32 @@
                 }
             });
             
-            // ==================== 下载文件功能 ====================
-            window.downloadFile = function(filePath, fileName) {
-                console.log('[下载] 下载文件:', filePath, fileName);
-                
-                // 创建下载链接
-                const a = document.createElement('a');
-                a.href = filePath;
-                a.download = fileName;
-                a.style.display = 'none';
-                document.body.appendChild(a);
-                
-                // 触发下载
-                a.click();
-                
-                // 清理
-                document.body.removeChild(a);
-                
-                console.log('[下载] 下载完成');
-            };
-        } else {
+            } else {
             document.getElementById('status').textContent = '抱歉，您的浏览器不支持语音合成功能。';
             document.getElementById('speak-btn').disabled = true;
             document.getElementById('pause-btn').disabled = true;
             document.getElementById('stop-btn').disabled = true;
         }
+        
+        // ==================== 下载文件功能（不依赖语音合成，移到外面） ====================
+        window.downloadFile = function(filePath, fileName) {
+            console.log('[下载] 下载文件:', filePath, fileName);
+            
+            // 创建下载链接
+            const a = document.createElement('a');
+            a.href = filePath;
+            a.download = fileName;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            
+            // 触发下载
+            a.click();
+            
+            // 清理
+            document.body.removeChild(a);
+            
+            console.log('[下载] 下载完成');
+        };
         
         // ==================== 拼音转换功能（不依赖语音合成，移到外面） ====================
         // 显示Toast提示

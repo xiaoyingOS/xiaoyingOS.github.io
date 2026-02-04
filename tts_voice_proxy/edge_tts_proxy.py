@@ -16,7 +16,8 @@ class EdgeTTSServer:
         self.active_connections = set()
         self.cancel_flags = {}  # 取消标志
     
-    async def handle_client(self, websocket: WebSocketServerProtocol, path: str):
+    # async def handle_client(self, websocket: WebSocketServerProtocol, path: str):老版本11需要传递 path参数
+    async def handle_client(self, websocket: WebSocketServerProtocol):
         """处理客户端连接"""
         print(f'[服务器] 新客户端连接: {websocket.remote_address}')
         self.active_connections.add(websocket)
