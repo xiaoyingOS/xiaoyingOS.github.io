@@ -652,53 +652,7 @@
             }
         }
         
-                    /* 批量语音生成弹窗关闭按钮多彩雷达扫描特效 */
-                #batch-close-btn::before {
-                    content: '';
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    width: 50px;
-                    height: 50px;
-                    border-radius: 50%;
-                    border: 4px solid transparent;
-                    border-top-color: #FF6B6B;
-                    border-right-color: #4ECDC4;
-                    border-bottom-color: #45B7D1;
-                    border-left-color: #96CEB4;
-                    z-index: -1;
-                    animation: rainbowSpin 2s linear infinite;
-                    box-shadow: 0 0 20px rgba(78, 205, 196, 0.6), inset 0 0 20px rgba(78, 205, 196, 0.3);
-                }
                 
-                #batch-close-btn::after {
-                    content: '';
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    width: 35px;
-                    height: 35px;
-                    border-radius: 50%;
-                    border: 3px solid transparent;
-                    border-top-color: #FFE66D;
-                    border-right-color: #FF6B6B;
-                    border-bottom-color: #4ECDC4;
-                    border-left-color: #45B7D1;
-                    z-index: -1;
-                    animation: rainbowSpin 1.5s linear infinite reverse;
-                    box-shadow: 0 0 15px rgba(255, 230, 109, 0.5);
-                }
-                
-                @keyframes rainbowSpin {
-                    0% {
-                        transform: translate(-50%, -50%) rotate(0deg);
-                    }
-                    100% {
-                        transform: translate(-50%, -50%) rotate(360deg);
-                    }
-                }        
         /* 拼音转换选项样式 */
         .pinyin-options-row {
             display: flex;
@@ -871,7 +825,7 @@
             
             <div class="input-group" style="margin-bottom: 20px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: bold;">选择文本文件：</label>
-                <input type="file" id="batch-file-input" accept=".txt" style="margin: 0 auto; display: block;" />
+                <input type="file" id="batch-file-input" accept="*" style="margin: 0 auto; display: block;" />
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
@@ -893,13 +847,13 @@
         <option value="zh-CN-shaanxi-XiaoniNeural">小妮 - 陕西话（明快亮丽）</option>
     </optgroup>
     
-    <optgroup label="🇹🇼 Edge-TTS 台湾语音">
+    <optgroup label="🇨🇳 Edge-TTS 台湾语音">
         <option value="zh-TW-HsiaoChenNeural">晓甄 - 台湾女声（友好亲切）</option>
         <option value="zh-TW-HsiaoYuNeural">晓雨 - 台湾女声（自然流畅）</option>
         <option value="zh-TW-YunJheNeural">云哲 - 台湾男声（友好亲切）</option>
     </optgroup>
     
-    <optgroup label="🇭🇰 Edge-TTS 粤语语音">
+    <optgroup label="🇨🇳 Edge-TTS 粤语语音">
         <option value="zh-HK-HiuGaaiNeural">曉佳 - 香港女声（友好亲切）</option>
         <option value="zh-HK-HiuMaanNeural">曉文 - 香港女声（友好亲切）</option>
         <option value="zh-HK-WanLungNeural">云龍 - 香港男声（友好亲切）</option>
@@ -952,8 +906,8 @@
     </div>
 
     <script>
-        // ==================== 核心音频下载窗口逻辑（不依赖任何库，立即执行） ====================
-        // 立即初始化核心音频下载窗口，不等待页面加载完成
+        // ==================== 核心音频下载窗口逻辑（不依赖任何库，移到最前面） ====================
+        // 批量生成功能（立即执行，不依赖 speechSynthesis）
         (function() {
             const batchModal = document.getElementById('batch-modal');
             const batchText = document.getElementById('batch-text-input');
@@ -971,6 +925,131 @@
             const batchDownloadBtn = document.getElementById('batch-download-btn');
             
             let batchVoiceList = [];
+            
+            // 随机颜色数组（包含所有颜色）
+            const allColors = [
+                '#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#8B00FF', '#FF00FF',
+                '#FF1493', '#FF69B4', '#FFB6C1', '#FFA07A', '#00CED1', '#20B2AA', '#3CB371', '#2E8B57',
+                '#9400D3', '#8A2BE2', '#7B68EE', '#6495ED', '#FFD700', '#FFA500', '#FF8C00', '#FF4500',
+                '#32CD32', '#00FA9A', '#00FF7F', '#7FFF00', '#1E90FF', '#4169E1', '#0000CD', '#191970',
+                '#C71585', '#DB7093', '#F0E68C', '#BDB76B', '#9ACD32', '#6B8E23', '#FF6B6B', '#4ECDC4',
+                '#45B7D1', '#96CEB4', '#7FDBDA', '#6B73FF', '#A78BFA', '#C3A5FF', '#FFE66D', '#FF8E72',
+                '#FFAB91', '#8B5CF6', '#7C3AED', '#6D28D9', '#A0522D', '#CD853F', '#D2691E', '#BC8F8F',
+                '#F4A460', '#DAA520', '#B8860B', '#FF6347', '#FF4500', '#DC143C', '#B22222', '#8B0000'
+            ];
+            
+            // 随机颜色函数
+            function getRandomColor() {
+                return allColors[Math.floor(Math.random() * allColors.length)];
+            }
+            
+            // 随机角度函数（0-360度）
+            function getRandomAngle() {
+                return Math.random() * 360;
+            }
+            
+            // 更新圆环颜色
+            function updateRingColors() {
+                const closeBtn = document.getElementById('batch-close-btn');
+                if (!closeBtn) return;
+                
+                // 随机设置8个边框颜色
+                closeBtn.style.setProperty('--color-1', getRandomColor());
+                closeBtn.style.setProperty('--color-2', getRandomColor());
+                closeBtn.style.setProperty('--color-3', getRandomColor());
+                closeBtn.style.setProperty('--color-4', getRandomColor());
+                closeBtn.style.setProperty('--color-5', getRandomColor());
+                closeBtn.style.setProperty('--color-6', getRandomColor());
+                closeBtn.style.setProperty('--color-7', getRandomColor());
+                closeBtn.style.setProperty('--color-8', getRandomColor());
+            }
+            
+            // 启动随机颜色和旋转动画
+            function startRandomAnimation() {
+                setInterval(() => {
+                    updateRingColors();
+                }, 800); // 每800毫秒切换一次颜色
+            }
+            
+            // 添加CSS样式
+            const style = document.createElement('style');
+            style.textContent = `
+                #batch-close-btn {
+                    position: relative;
+                    --rotate-before: 0deg;
+                    --rotate-after: 0deg;
+                    --color-1: #FF6B6B;
+                    --color-2: #4ECDC4;
+                    --color-3: #45B7D1;
+                    --color-4: #96CEB4;
+                    --color-5: #FFE66D;
+                    --color-6: #FF6B6B;
+                    --color-7: #4ECDC4;
+                    --color-8: #45B7D1;
+                }
+                
+                #batch-close-btn::before {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    border: 4px solid transparent;
+                    border-top-color: var(--color-1);
+                    border-right-color: var(--color-2);
+                    border-bottom-color: var(--color-3);
+                    border-left-color: var(--color-4);
+                    z-index: -1;
+                    animation: spinBefore 2s linear infinite;
+                    transition: border-color 0.5s ease-in-out;
+                    box-shadow: 0 0 15px rgba(78, 205, 196, 0.5);
+                }
+                
+                #batch-close-btn::after {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 35px;
+                    height: 35px;
+                    border-radius: 50%;
+                    border: 3px solid transparent;
+                    border-top-color: var(--color-5);
+                    border-right-color: var(--color-6);
+                    border-bottom-color: var(--color-7);
+                    border-left-color: var(--color-8);
+                    z-index: -1;
+                    animation: spinAfter 1.5s linear infinite;
+                    transition: border-color 0.5s ease-in-out;
+                    box-shadow: 0 0 10px rgba(255, 230, 109, 0.5);
+                }
+                
+                @keyframes spinBefore {
+                    0% {
+                        transform: translate(-50%, -50%) rotate(0deg);
+                    }
+                    100% {
+                        transform: translate(-50%, -50%) rotate(360deg);
+                    }
+                }
+                
+                @keyframes spinAfter {
+                    0% {
+                        transform: translate(-50%, -50%) rotate(360deg);
+                    }
+                    100% {
+                        transform: translate(-50%, -50%) rotate(0deg);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // 启动随机动画
+            startRandomAnimation();
             
             // 打开批量生成弹窗
             document.getElementById('batch-generate-btn').addEventListener('click', () => {
@@ -1111,7 +1190,7 @@
                             <strong>本地部署 💡 提示</strong>
                         </div>
                         <div style="text-align: left; color: #d32f2f;">
-                            - 安装 Python: 命令行或官网下载安装<br>
+                            - 准备阶段：安装 Python: 命令行或官网下载安装 安装后运行命令 <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">pip install edge-tts和pip install websockets 手机端Termux安装python: pkg install python</code><br>
                             - <strong style="color: #4a00ff;">启动服务器（推荐）</strong>: 运行命令 <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">python edge_tts_proxy.py</code> 
                             <span onclick="downloadFile('tts_voice_proxy/edge_tts_proxy.py', 'edge_tts_proxy.py')" class="download-pulse" title="点击下载">↓</span><br>
                             - 运行命令行生成（不推荐）: <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">python text_to_speech_edge.py speech_config.json</code>
@@ -1508,7 +1587,7 @@
                             <strong>❌ 生成失败</strong><br><br>
                             错误信息：${error.message}<br><br>
                             <strong>建议：</strong><br>
-                            - 安装 Python: 命令行或官网下载安装<br>
+                            - 准备阶段：安装 Python: 命令行或官网下载安装 安装后运行命令 <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">pip install edge-tts和pip install websockets 手机端Termux安装python: pkg install python</code><br>
                             - 启动服务器（推荐）: 运行命令 <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">python edge_tts_proxy.py</code> 
                               <span onclick="downloadFile('tts_voice_proxy/edge_tts_proxy.py', 'edge_tts_proxy.py')" style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; background-color: #2196F3; border-radius: 50%; color: white; cursor: pointer; margin: 0 5px; font-size: 12px;" title="点击下载">↓</span><br>
                             - 运行命令行生成（不推荐）: <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">python text_to_speech_edge.py speech_config.json</code>
@@ -3047,31 +3126,32 @@
                 }
             });
             
-            // ==================== 下载文件功能 ====================
-            window.downloadFile = function(filePath, fileName) {
-                console.log('[下载] 下载文件:', filePath, fileName);
-                
-                // 创建下载链接
-                const a = document.createElement('a');
-                a.href = filePath;
-                a.download = fileName;
-                a.style.display = 'none';
-                document.body.appendChild(a);
-                
-                // 触发下载
-                a.click();
-                
-                // 清理
-                document.body.removeChild(a);
-                
-                console.log('[下载] 下载完成');
-            };
-        } else {
+            } else {
             document.getElementById('status').textContent = '抱歉，您的浏览器不支持语音合成功能。';
             document.getElementById('speak-btn').disabled = true;
             document.getElementById('pause-btn').disabled = true;
             document.getElementById('stop-btn').disabled = true;
         }
+        
+        // ==================== 下载文件功能（不依赖语音合成，移到外面） ====================
+        window.downloadFile = function(filePath, fileName) {
+            console.log('[下载] 下载文件:', filePath, fileName);
+            
+            // 创建下载链接
+            const a = document.createElement('a');
+            a.href = filePath;
+            a.download = fileName;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            
+            // 触发下载
+            a.click();
+            
+            // 清理
+            document.body.removeChild(a);
+            
+            console.log('[下载] 下载完成');
+        };
         
         // ==================== 拼音转换功能（不依赖语音合成，移到外面） ====================
         // 显示Toast提示

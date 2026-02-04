@@ -1743,6 +1743,9 @@
                         updateCustomSelect();
                         
                         // 尝试选择中文语音
+                        // 保存用户当前选择
+                        const currentSelection = voiceSelect.value;
+                        if (currentSelection === -1 || currentSelection === '') {
                         let chineseVoiceFound = false;
                         for (let i = 0; i < voices.length; i++) {
                             if (voices[i].lang.includes('zh')) {
@@ -1761,10 +1764,15 @@
                                 }
                             }
                         }
+
+                        } else {
+                        // 恢复用户的选择
+                        voiceSelect.value = currentSelection;
+                        }
                         
                         // 更新自定义选择显示
                         updateSelectedVoiceDisplay();
-                    } else {
+                        } else {
                         // 如果仍然没有语音，显示默认模型
                         voiceSelect.innerHTML = '';
                         const option = document.createElement('option');
@@ -1878,11 +1886,11 @@
                 
                 // 更新按钮状态
                 updateButtonStates();
-                
                 // 更新拼音转换
-                if (typeof convertHanzi === 'function') {
-                    convertHanzi();
+                if (typeof convert === 'function') {
+                    convert();
                 }
+                
             }
             
             // 更新按钮状态
@@ -3069,9 +3077,9 @@
             updateSegmentCount();
             
             // 监听语音列表变化
-            if (speechSynthesis.onvoiceschanged !== undefined) {
-                speechSynthesis.onvoiceschanged = loadVoices;
-            }
+            // if (speechSynthesis.onvoiceschanged !== undefined) {
+            //     speechSynthesis.onvoiceschanged = loadVoices;
+            // }
             
             // 多次尝试加载，确保语音列表完全加载
             let loadAttempts = 0;
@@ -3295,6 +3303,18 @@
         
         // 监听输入框变化（实时转换）
         hanziInput.addEventListener('input', function(e) {
+            // 保存当前内容到撤销栈
+          const newContent = hanziInput.value;
+          if (currentContent !== undefined && currentContent !== newContent) {
+             undoStack.push(currentContent);
+             if (undoStack.length > 50) {
+                undoStack.shift();
+              }
+              redoStack = [];
+              updateButtonStates();
+          }
+          currentContent = newContent;
+     
             // 清除之前的定时器
             if (typingTimer) {
                 clearTimeout(typingTimer);
@@ -3437,14 +3457,14 @@
             currentTab = tab;
             
             // 如果有输入内容，立即更新
-            if (document.getElementById('hanziInput').value.trim()) {
+            if (document.getElementById('hanziInput').value) {
                 convert();
             }
         }
 
         // 实时转换函数（优化版 - 异步处理）
         function convert() {
-            const input = document.getElementById('hanziInput').value.trim();
+            const input = document.getElementById('hanziInput').value;
             const resultDiv = document.getElementById('pinyin-display');
             
             if (!input) {
@@ -3644,29 +3664,12 @@
         // 监听配置选项变化
         document.querySelectorAll('input[name="toneType"], input[type="checkbox"]').forEach(element => {
             element.addEventListener('change', function() {
-                if (document.getElementById('hanziInput').value.trim()) {
+                if (document.getElementById('hanziInput').value) {
                     convert();
                 }
             });
         });
         
-        
-        
-                // 添加键盘事件支持
-        
-                document.getElementById('hanziInput').addEventListener('keydown', function(e) {
-        
-                    if (e.key === 'Enter' && e.ctrlKey) {
-        
-                        if (typeof convertHanzi === 'function') {
-        
-                            convertHanzi();
-        
-                        }
-        
-                    }
-        
-                });
         
         // 计算分割点权重（权重评分系统专用）
         function calculateSplitScore(char, segment, position, fullText, prevChar, nextChar) {
