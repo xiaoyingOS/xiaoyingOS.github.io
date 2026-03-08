@@ -1,0 +1,2046 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <title>视频分割音频转换测试</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
+        h1 { margin-bottom: 20px; }
+        input[type="file"] { margin: 20px 0; }
+        video { width: 100%; max-width: 800px; margin-top: 20px; display: block; }
+        #status { margin: 20px 0; color: #ff6b9d; white-space: pre-wrap; font-size: 14px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .info { color: #2196F3; }
+        .codec-btn { display: inline-block; margin: 5px; }
+        .codec-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .file-item { 
+            background: #1a1a1a; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 8px; 
+            border-left: 4px solid #2196F3;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .file-info { flex: 1; }
+        .file-name { font-weight: bold; color: #2196F3; margin-bottom: 5px; }
+        .file-meta { color: #888; font-size: 12px; }
+        .file-actions { display: flex; gap: 10px; }
+        .file-btn { 
+            padding: 8px 15px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 12px;
+        }
+        .play-btn { background: #4CAF50; color: white; }
+        .delete-btn { background: #f44336; color: white; }
+        .download-btn { background: #2196F3; color: white; }
+        .checkbox-container { display: flex; align-items: center; margin-right: 15px; }
+        .file-checkbox { width: 18px; height: 18px; cursor: pointer; }
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #333;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #7b1fa2, #ffff00);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 15px;
+        }
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0,0,0,0.8);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+        .modal-content {
+            position: relative;
+            background-color: #1a1a1a;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #333;
+            width: 90%;
+            max-width: 900px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 10px;
+            color: #fff;
+        }
+        .close-modal {
+            position: fixed;
+            top: calc(5% + 50px);
+            right: calc(5% + 10px);
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            z-index: 1001;
+            border-radius: 50%;
+            background: transparent;
+            --color-1: #FF6B6B;
+            --color-2: #4ECDC4;
+            --color-3: #45B7D1;
+            --color-4: #96CEB4;
+            --color-5: #FFE66D;
+            --color-6: #FF6B6B;
+            --color-7: #4ECDC4;
+            --color-8: #45B7D1;
+        }
+        .close-modal::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 4px solid transparent;
+            border-top-color: var(--color-1);
+            border-right-color: var(--color-2);
+            border-bottom-color: var(--color-3);
+            border-left-color: var(--color-4);
+            z-index: -1;
+            animation: spinBefore 2s linear infinite;
+            transition: border-color 0.5s ease-in-out;
+            box-shadow: 0 0 15px rgba(78, 205, 196, 0.5);
+        }
+        .close-modal::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: var(--color-5);
+            border-right-color: var(--color-6);
+            border-bottom-color: var(--color-7);
+            border-left-color: var(--color-8);
+            z-index: -1;
+            animation: spinAfter 1.5s linear infinite;
+            transition: border-color 0.5s ease-in-out;
+            box-shadow: 0 0 10px rgba(255, 230, 109, 0.5);
+        }
+        @keyframes spinBefore {
+            0% {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+            100% {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+        @keyframes spinAfter {
+            0% {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+            100% {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+        }
+        .close-modal:hover {
+            color: #fff;
+        }
+        .config-section {
+            margin: 15px 0;
+            padding: 15px;
+            background: #2a2a2a;
+            border-radius: 8px;
+        }
+        .config-section h3 {
+            color: #9C27B0;
+            margin-bottom: 10px;
+        }
+        .config-option {
+            margin: 10px 0;
+            padding: 10px;
+            background: #333;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .config-option:hover {
+            border-color: #9C27B0;
+        }
+        .config-option.selected {
+            border-color: #4CAF50;
+            background: #1a3a1a;
+        }
+        .config-option-title {
+            font-weight: bold;
+            color: #2196F3;
+            margin-bottom: 5px;
+        }
+        .config-option-desc {
+            font-size: 12px;
+            color: #888;
+        }
+        .config-option-details {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+        }
+        select, input[type="number"] {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+        .apply-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+        .apply-btn:hover {
+            background: #45a049;
+        }
+        /* 主题样式 */
+        body.dark-theme {
+            background: #000;
+            color: #fff;
+        }
+        body.light-theme {
+            background: #ffffff;
+            color: #1a1a1a;
+        }
+        body.light-theme .config-section {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        body.light-theme .config-option {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        body.light-theme .config-option:hover {
+            border-color: #9C27B0;
+            background: #f1f3f5;
+            box-shadow: 0 2px 8px rgba(156,39,176,0.15);
+        }
+        body.light-theme .config-option.selected {
+            border-color: #4CAF50;
+            background: #e8f5e9;
+            box-shadow: 0 2px 8px rgba(76,175,80,0.2);
+        }
+        body.light-theme .config-option-title {
+            color: #6a1b9a;
+        }
+        body.light-theme .config-option-desc {
+            color: #4a4a4a;
+        }
+        body.light-theme .config-option-details {
+            color: #757575;
+        }
+        body.light-theme #currentConfig {
+            background: #ffffff;
+            color: #2e7d32;
+            border: 1px solid #e0e0e0;
+        }
+        body.light-theme .modal-content {
+            background: #ffffff;
+            color: #1a1a1a;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+        }
+        body.light-theme h2, body.light-theme h3 {
+            color: #212121;
+        }
+        body.light-theme h1 {
+            color: #212121;
+        }
+        body.light-theme select, body.light-theme input[type="number"], body.light-theme input[type="text"] {
+            background: #ffffff;
+            color: #1a1a1a;
+            border: 1px solid #e0e0e0;
+        }
+        body.light-theme .close-modal {
+            color: #616161;
+        }
+        body.light-theme .close-modal:hover {
+            color: #212121;
+        }
+        body.light-theme .file-item {
+            background: #ffffff;
+            border-left: 4px solid #2196F3;
+            border: 1px solid #e0e0e0;
+            border-left: 4px solid #2196F3;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        body.light-theme .file-name {
+            color: #1976D2;
+        }
+        body.light-theme .file-meta {
+            color: #757575;
+        }
+        body.light-theme .progress-bar {
+            background: #e0e0e0;
+        }
+        body.light-theme .progress-fill {
+            background: linear-gradient(90deg, #7b1fa2, #ffff00);
+        }
+        body.light-theme #status {
+            color: #c2185b;
+        }
+        body.light-theme .apply-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        body.light-theme .apply-btn:hover {
+            background: #43a047;
+        }
+        body.light-theme .checkbox-container {
+            color: #424242;
+        }
+    </style>
+</head>
+<body>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1>🎬 全能视频播放器</h1>
+        <button onclick="toggleTheme()" id="themeBtn" style="padding: 10px 15px; background: transparent; color: inherit; border: none; border-radius: 8px; font-size: 24px; cursor: pointer; min-width: 50px;">🌙</button>
+    </div>
+    <div style="margin: 20px 0;">
+        <button onclick="document.getElementById('fileInputGallery').click()" style="padding: 12px 25px; background: #2196F3; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">📱 选择图库</button>
+        <button onclick="document.getElementById('fileInputFiles').click()" style="padding: 12px 25px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">📁 选择文件</button>
+        <input type="file" id="fileInputGallery" accept="video/*" style="display: none;" onchange="handleFileSelect(event)">
+        <input type="file" id="fileInputFiles" style="display: none;" onchange="handleFileSelect(event)">
+    </div>
+    <div style="margin: 20px 0;">
+        <button onclick="convertAll()" id="convertBtn" disabled>🔄 分割并转换</button>
+        <button onclick="document.getElementById('folderInput').click()" style="padding: 12px 25px; background: #FF9800; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">📂 选择文件夹</button>
+        <button onclick="quickConvert()" id="quickConvertBtn" disabled style="padding: 12px 25px; background: #9C27B0; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">⚡ 快速转换</button>
+        <button onclick="openFfmpegConfig()" style="padding: 12px 25px; background: #FF5722; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">⚙️ FFmpeg配置</button>
+        <input type="file" id="folderInput" webkitdirectory directory multiple style="display: none;" onchange="handleFolderSelect(event)">
+    </div>
+    
+    <div class="progress-container" id="progressContainer">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+            <div class="progress-text" id="progressText">0%</div>
+        </div>
+    </div>
+    
+    <!-- FFmpeg配置模态框 -->
+    <div id="ffmpegConfigModal" class="modal">
+        <span class="close-modal" onclick="closeFfmpegConfig()">&times;</span>
+        <div class="modal-content">
+            <h2>⚙️ FFmpeg 完整配置参数 [一般不需要修改]</h2>
+            
+            <!-- 视频编码器 -->
+            <div class="config-section">
+                <h3>🎬 视频编码器 (-c:v)</h3>
+                <div class="config-option" onclick="selectVideoCodec('copy')" id="video-copy">
+                    <div class="config-option-title">copy - 复制 [推荐] 视频参数和原视频一样 帧率、分辨率等等视频参数锁定不可变</div>
+                    <div class="config-option-desc">不重新编码，直接复制视频流 [默认选择] 下面编码都是压缩</div>
+                    <div class="config-option-details">参数: -c:v copy | 速度: ⚡⚡⚡⚡⚡ | 质量: 100% | 压缩率: 0%</div>
+                </div>
+                <div class="config-option" onclick="selectVideoCodec('libx264')" id="video-libx264">
+                    <div class="config-option-title">libx264 - H.264/AVC</div>
+                    <div class="config-option-desc">最常用的视频编码格式，兼容性最好</div>
+                    <div class="config-option-details">参数: -c:v libx264 | 速度: ⚡⚡⚡ | 质量: 95% | 压缩率: ⭐⭐⭐⭐</div>
+                </div>
+                <div class="config-option" onclick="selectVideoCodec('libx265')" id="video-libx265">
+                    <div class="config-option-title">libx265 - H.265/HEVC</div>
+                    <div class="config-option-desc">新一代编码，压缩率更高，但速度较慢</div>
+                    <div class="config-option-details">参数: -c:v libx265 | 速度: ⚡⚡ | 质量: 95% | 压缩率: ⭐⭐⭐⭐⭐</div>
+                </div>
+                <div class="config-option" onclick="selectVideoCodec('libvpx-vp9')" id="video-libvpx-vp9">
+                    <div class="config-option-title">libvpx-vp9 - VP9</div>
+                    <div class="config-option-desc">Google开源编码，WebM格式</div>
+                    <div class="config-option-details">参数: -c:v libvpx-vp9 | 速度: ⚡⚡ | 质量: 95% | 压缩率: ⭐⭐⭐⭐</div>
+                </div>
+                <div class="config-option" onclick="selectVideoCodec('libaom-av1')" id="video-libaom-av1">
+                    <div class="config-option-title">libaom-av1 - AV1</div>
+                    <div class="config-option-desc">最新一代编码，压缩率最高</div>
+                    <div class="config-option-details">参数: -c:v libaom-av1 | 速度: ⚡ | 质量: 95% | 压缩率: ⭐⭐⭐⭐⭐</div>
+                </div>
+            </div>
+            
+            <!-- 质量控制 -->
+            <div class="config-section" id="qualitySection" style="display: none;">
+                <h3>📊 恒定质量因子 (-crf)</h3>
+                <div class="config-option" onclick="selectCRF(0)" id="crf-0">
+                    <div class="config-option-title">0 - 无损</div>
+                    <div class="config-option-desc">完全无损，文件最大</div>
+                    <div class="config-option-details">参数: -crf 0 | 适用于: 专业制作、母带存档</div>
+                </div>
+                <div class="config-option" onclick="selectCRF(18)" id="crf-18">
+                    <div class="config-option-title">18 - 高质量</div>
+                    <div class="config-option-desc">近乎无损，文件较大</div>
+                    <div class="config-option-details">参数: -crf 18 | 适用于: 专业制作、存档</div>
+                </div>
+                <div class="config-option" onclick="selectCRF(20)" id="crf-20">
+                    <div class="config-option-title">20 - 很高质量</div>
+                    <div class="config-option-desc">高质量，文件适中</div>
+                    <div class="config-option-details">参数: -crf 20 | 适用于: 高质量视频</div>
+                </div>
+                <div class="config-option" onclick="selectCRF(23)" id="crf-23">
+                    <div class="config-option-title">23 - 默认质量</div>
+                    <div class="config-option-desc">视觉无损，平衡大小和质量</div>
+                    <div class="config-option-details">参数: -crf 23 | 适用于: 通用场景</div>
+                </div>
+                <div class="config-option" onclick="selectCRF(26)" id="crf-26">
+                    <div class="config-option-title">26 - 中等质量</div>
+                    <div class="config-option-desc">质量可接受，文件较小</div>
+                    <div class="config-option-details">参数: -crf 26 | 适用于: 网络传输</div>
+                </div>
+                <div class="config-option" onclick="selectCRF(28)" id="crf-28">
+                    <div class="config-option-title">28 - 压缩质量</div>
+                    <div class="config-option-desc">质量较低，文件最小</div>
+                    <div class="config-option-details">参数: -crf 28 | 适用于: 低带宽</div>
+                </div>
+                <div class="config-option" onclick="selectCRF(35)" id="crf-35">
+                    <div class="config-option-title">35 - 低质量</div>
+                    <div class="config-option-desc">低质量，文件非常小</div>
+                    <div class="config-option-details">参数: -crf 35 | 适用于: 预览</div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <label>自定义 CRF 值 (0-51): </label>
+                    <input type="number" id="customCRF" min="0" max="51" value="23" style="width: 80px;">
+                    <button onclick="applyCustomCRF()" style="padding: 5px 10px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer;">应用</button>
+                </div>
+            </div>
+            
+            <!-- 编码预设 -->
+            <div class="config-section" id="presetSection" style="display: none;">
+                <h3>⚡ 编码速度预设 (-preset)</h3>
+                <div class="config-option" onclick="selectPreset('ultrafast')" id="preset-ultrafast">
+                    <div class="config-option-title">ultrafast - 极速 相同码率下的画质最差</div>
+                    <div class="config-option-desc">最快编码，文件较大，压缩率最低 码率浪费画质最差</div>
+                    <div class="config-option-details">参数: -preset ultrafast | 适用于: 实时流媒体、直播</div>
+                </div>
+                <div class="config-option" onclick="selectPreset('superfast')" id="preset-superfast">
+                    <div class="config-option-title">superfast - 超快</div>
+                    <div class="config-option-desc">非常快，文件较大</div>
+                    <div class="config-option-details">参数: -preset superfast | 适用于: 快速处理</div>
+                </div>
+                <div class="config-option" onclick="selectPreset('veryfast')" id="preset-veryfast">
+                    <div class="config-option-title">veryfast - 很快</div>
+                    <div class="config-option-desc">很快，文件中等偏大</div>
+                    <div class="config-option-details">参数: -preset veryfast | 适用于: 快速处理</div>
+                </div>
+                <div class="config-option" onclick="selectPreset('faster')" id="preset-faster">
+                    <div class="config-option-title">faster - 更快</div>
+                    <div class="config-option-desc">较快，文件中等</div>
+                    <div class="config-option-details">参数: -preset faster | 适用于: 日常使用</div>
+                </div>
+                <div class="config-option" onclick="selectPreset('fast')" id="preset-fast">
+                    <div class="config-option-title">fast - 快速</div>
+                    <div class="config-option-desc">快速编码，文件中等</div>
+                    <div class="config-option-details">参数: -preset fast | 适用于: 在线视频</div>
+                </div>
+                <div class="config-option" onclick="selectPreset('medium')" id="preset-medium">
+                    <div class="config-option-title">medium - 中等</div>
+                    <div class="config-option-desc">平衡速度和质量，默认值</div>
+                    <div class="config-option-details">参数: -preset medium | 适用于: 通用场景</div>
+                </div>
+                <div class="config-option" onclick="selectPreset('slow')" id="preset-slow">
+                    <div class="config-option-title">slow - 慢速</div>
+                    <div class="config-option-desc">慢速编码，文件较小</div>
+                    <div class="config-option-details">参数: -preset slow | 适用于: 高质量存档</div>
+                </div>
+                <div class="config-option" onclick="selectPreset('slower')" id="preset-slower">
+                    <div class="config-option-title">slower - 更慢</div>
+                    <div class="config-option-desc">更慢编码，文件更小</div>
+                    <div class="config-option-details">参数: -preset slower | 适用于: 极限压缩</div>
+                </div>
+                <div class="config-option" onclick="selectPreset('veryslow')" id="preset-veryslow">
+                    <div class="config-option-title">veryslow - 极慢 相同码率下的画质最好</div>
+                    <div class="config-option-desc">最慢编码，文件最小，压缩率最高 画质最好</div>
+                    <div class="config-option-details">参数: -preset veryslow | 适用于: 最终存档</div>
+                </div>
+            </div>
+            
+            <!-- 视频比特率 -->
+            <div class="config-section" id="bitrateSection" style="display: none;">
+                <h3>📶 视频比特率 (-b:v)</h3>
+                <div class="config-option" onclick="selectBitrate('500k')" id="br-500k">
+                    <div class="config-option-title">500 kbps - 低码率</div>
+                    <div class="config-option-desc">低质量，文件最小</div>
+                    <div class="config-option-details">参数: -b:v 500k | 适用于: 低带宽、预览</div>
+                </div>
+                <div class="config-option" onclick="selectBitrate('1000k')" id="br-1000k">
+                    <div class="config-option-title">1000 kbps - 标清</div>
+                    <div class="config-option-desc">标清质量，适合480p</div>
+                    <div class="config-option-details">参数: -b:v 1000k | 适用于: 标清视频</div>
+                </div>
+                <div class="config-option" onclick="selectBitrate('2000k')" id="br-2000k">
+                    <div class="config-option-title">2000 kbps - 高清</div>
+                    <div class="config-option-desc">高清质量，适合720p</div>
+                    <div class="config-option-details">参数: -b:v 2000k | 适用于: 高清视频</div>
+                </div>
+                <div class="config-option" onclick="selectBitrate('4000k')" id="br-4000k">
+                    <div class="config-option-title">4000 kbps - 全高清</div>
+                    <div class="config-option-desc">全高清质量，适合1080p</div>
+                    <div class="config-option-details">参数: -b:v 4000k | 适用于: 全高清视频</div>
+                </div>
+                <div class="config-option" onclick="selectBitrate('8000k')" id="br-8000k">
+                    <div class="config-option-title">8000 kbps - 超高清</div>
+                    <div class="config-option-desc">超高清质量，适合1440p</div>
+                    <div class="config-option-details">参数: -b:v 8000k | 适用于: 2K视频</div>
+                </div>
+                <div class="config-option" onclick="selectBitrate('15000k')" id="br-15000k">
+                    <div class="config-option-title">15000 kbps - 4K</div>
+                    <div class="config-option-desc">4K质量，适合2160p</div>
+                    <div class="config-option-details">参数: -b:v 15000k | 适用于: 4K视频</div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <label>自定义比特率: </label>
+                    <input type="text" id="customBitrate" placeholder="例如: 3000k" style="width: 100px;">
+                    <button onclick="applyCustomBitrate()" style="padding: 5px 10px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer;">应用</button>
+                </div>
+            </div>
+            
+            <!-- 帧率 -->
+            <div class="config-section">
+                <h3>🎞️ 帧率 (-r)</h3>
+                <div class="config-option" onclick="selectFrameRate('24')" id="fr-24">
+                    <div class="config-option-title">24 fps - 电影</div>
+                    <div class="config-option-desc">电影标准帧率</div>
+                    <div class="config-option-details">参数: -r 24 | 适用于: 电影、艺术视频</div>
+                </div>
+                <div class="config-option" onclick="selectFrameRate('25')" id="fr-25">
+                    <div class="config-option-title">25 fps - PAL</div>
+                    <div class="config-option-desc">PAL电视标准</div>
+                    <div class="config-option-details">参数: -r 25 | 适用于: 欧洲电视</div>
+                </div>
+                <div class="config-option" onclick="selectFrameRate('30')" id="fr-30">
+                    <div class="config-option-title">30 fps - NTSC</div>
+                    <div class="config-option-desc">NTSC电视标准，最常用</div>
+                    <div class="config-option-details">参数: -r 30 | 适用于: 通用视频</div>
+                </div>
+                <div class="config-option" onclick="selectFrameRate('60')" id="fr-60">
+                    <div class="config-option-title">60 fps - 高帧率</div>
+                    <div class="config-option-desc">高帧率，流畅度更高</div>
+                    <div class="config-option-details">参数: -r 60 | 适用于: 游戏、体育</div>
+                </div>
+                <div class="config-option" onclick="selectFrameRate('120')" id="fr-120">
+                    <div class="config-option-title">120 fps - 超高帧率</div>
+                    <div class="config-option-desc">超高帧率，极致流畅</div>
+                    <div class="config-option-details">参数: -r 120 | 适用于: 专业录制</div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <label>自定义帧率: </label>
+                    <input type="number" id="customFrameRate" min="1" max="240" value="30" style="width: 80px;">
+                    <button onclick="applyCustomFrameRate()" style="padding: 5px 10px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer;">应用</button>
+                </div>
+            </div>
+            
+            <!-- 分辨率 -->
+            <div class="config-section">
+                <h3>📐 分辨率 (-vf scale)</h3>
+                <div class="config-option" onclick="selectResolution('320x240')" id="res-320x240">
+                    <div class="config-option-title">320x240 - QVGA</div>
+                    <div class="config-option-desc">低分辨率，适合预览</div>
+                    <div class="config-option-details">参数: -vf scale=320:240 | 适用于: 预览</div>
+                </div>
+                <div class="config-option" onclick="selectResolution('640x480')" id="res-640x480">
+                    <div class="config-option-title">640x480 - VGA</div>
+                    <div class="config-option-desc">VGA分辨率</div>
+                    <div class="config-option-details">参数: -vf scale=640:480 | 适用于: 标清</div>
+                </div>
+                <div class="config-option" onclick="selectResolution('854x480')" id="res-854x480">
+                    <div class="config-option-title">854x480 - 480p</div>
+                    <div class="config-option-desc">标清分辨率</div>
+                    <div class="config-option-details">参数: -vf scale=854:480 | 适用于: 标清视频</div>
+                </div>
+                <div class="config-option" onclick="selectResolution('1280x720')" id="res-1280x720">
+                    <div class="config-option-title">1280x720 - 720p</div>
+                    <div class="config-option-desc">高清分辨率</div>
+                    <div class="config-option-details">参数: -vf scale=1280:720 | 适用于: 高清视频</div>
+                </div>
+                <div class="config-option" onclick="selectResolution('1920x1080')" id="res-1920x1080">
+                    <div class="config-option-title">1920x1080 - 1080p</div>
+                    <div class="config-option-desc">全高清分辨率</div>
+                    <div class="config-option-details">参数: -vf scale=1920:1080 | 适用于: 全高清视频</div>
+                </div>
+                <div class="config-option" onclick="selectResolution('2560x1440')" id="res-2560x1440">
+                    <div class="config-option-title">2560x1440 - 1440p</div>
+                    <div class="config-option-desc">2K分辨率</div>
+                    <div class="config-option-details">参数: -vf scale=2560:1440 | 适用于: 2K视频</div>
+                </div>
+                <div class="config-option" onclick="selectResolution('3840x2160')" id="res-3840x2160">
+                    <div class="config-option-title">3840x2160 - 2160p</div>
+                    <div class="config-option-desc">4K分辨率</div>
+                    <div class="config-option-details">参数: -vf scale=3840:2160 | 适用于: 4K视频</div>
+                </div>
+                <div class="config-option" onclick="selectResolution('copy')" id="res-copy">
+                    <div class="config-option-title">复制原始分辨率</div>
+                    <div class="config-option-desc">保持原始分辨率不变</div>
+                    <div class="config-option-details">参数: 不使用scale滤镜</div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <label>自定义分辨率: </label>
+                    <input type="text" id="customResolution" placeholder="例如: 1280x720" style="width: 120px;">
+                    <button onclick="applyCustomResolution()" style="padding: 5px 10px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer;">应用</button>
+                </div>
+            </div>
+            
+            <!-- 宽高比 -->
+            <div class="config-section">
+                <h3>📏 宽高比 (-aspect)</h3>
+                <div class="config-option" onclick="selectAspect('4:3')" id="aspect-4:3">
+                    <div class="config-option-title">4:3 - 传统</div>
+                    <div class="config-option-desc">传统电视比例</div>
+                    <div class="config-option-details">参数: -aspect 4:3 | 适用于: 老视频</div>
+                </div>
+                <div class="config-option" onclick="selectAspect('16:9')" id="aspect-16:9">
+                    <div class="config-option-title">16:9 - 宽屏</div>
+                    <div class="config-option-desc">标准宽屏比例</div>
+                    <div class="config-option-details">参数: -aspect 16:9 | 适用于: 现代视频</div>
+                </div>
+                <div class="config-option" onclick="selectAspect('21:9')" id="aspect-21:9">
+                    <div class="config-option-title">21:9 - 超宽屏</div>
+                    <div class="config-option-desc">电影超宽屏比例</div>
+                    <div class="config-option-details">参数: -aspect 21:9 | 适用于: 电影</div>
+                </div>
+                <div class="config-option" onclick="selectAspect('1:1')" id="aspect-1:1">
+                    <div class="config-option-title">1:1 - 正方形</div>
+                    <div class="config-option-desc">正方形比例</div>
+                    <div class="config-option-details">参数: -aspect 1:1 | 适用于: 社交媒体</div>
+                </div>
+                <div class="config-option" onclick="selectAspect('copy')" id="aspect-copy">
+                    <div class="config-option-title">复制原始宽高比</div>
+                    <div class="config-option-desc">保持原始宽高比</div>
+                    <div class="config-option-details">参数: 不使用-aspect</div>
+                </div>
+            </div>
+            
+            <!-- 音频采样率 -->
+            <div class="config-section">
+                <h3>🎵 音频采样率 (-ar)</h3>
+                <div class="config-option" onclick="selectSampleRate('8000')" id="sr-8000">
+                    <div class="config-option-title">8000 Hz - 电话</div>
+                    <div class="config-option-desc">电话质量</div>
+                    <div class="config-option-details">参数: -ar 8000 | 带宽: 64 kbps (PCM) | 适用于: 语音</div>
+                </div>
+                <div class="config-option" onclick="selectSampleRate('16000')" id="sr-16000">
+                    <div class="config-option-title">16000 Hz - 广播</div>
+                    <div class="config-option-desc">广播质量</div>
+                    <div class="config-option-details">参数: -ar 16000 | 带宽: 128 kbps (PCM) | 适用于: 语音识别</div>
+                </div>
+                <div class="config-option" onclick="selectSampleRate('22050')" id="sr-22050">
+                    <div class="config-option-title">22050 Hz - 低音质</div>
+                    <div class="config-option-desc">低音质</div>
+                    <div class="config-option-details">参数: -ar 22050 | 带宽: 176 kbps (PCM) | 适用于: 老游戏</div>
+                </div>
+                <div class="config-option" onclick="selectSampleRate('44100')" id="sr-44100">
+                    <div class="config-option-title">44100 Hz - CD质量</div>
+                    <div class="config-option-desc">标准CD音质，音乐标准</div>
+                    <div class="config-option-details">参数: -ar 44100 | 带宽: 352 kbps (PCM) | 适用于: 音乐</div>
+                </div>
+                <div class="config-option" onclick="selectSampleRate('48000')" id="sr-48000">
+                    <div class="config-option-title">48000 Hz - 专业音频</div>
+                    <div class="config-option-desc">电影和专业音频标准</div>
+                    <div class="config-option-details">参数: -ar 48000 | 带宽: 384 kbps (PCM) | 适用于: 电影</div>
+                </div>
+                <div class="config-option" onclick="selectSampleRate('96000')" id="sr-96000">
+                    <div class="config-option-title">96000 Hz - 高保真</div>
+                    <div class="config-option-desc">高保真录音，专业制作</div>
+                    <div class="config-option-details">参数: -ar 96000 | 带宽: 768 kbps (PCM) | 适用于: 专业录音</div>
+                </div>
+                <div class="config-option" onclick="selectSampleRate('192000')" id="sr-192000">
+                    <div class="config-option-title">192000 Hz - 超高保真</div>
+                    <div class="config-option-desc">超高保真，母带制作</div>
+                    <div class="config-option-details">参数: -ar 192000 | 带宽: 1536 kbps (PCM) | 适用于: 母带</div>
+                </div>
+            </div>
+            
+            <!-- 音频声道数 -->
+            <div class="config-section">
+                <h3>🎧 音频声道数 (-ac)</h3>
+                <div class="config-option" onclick="selectChannels('1')" id="ac-1">
+                    <div class="config-option-title">1 - 单声道</div>
+                    <div class="config-option-desc">单声道音频</div>
+                    <div class="config-option-details">参数: -ac 1 | 适用于: 语音、播客</div>
+                </div>
+                <div class="config-option" onclick="selectChannels('2')" id="ac-2">
+                    <div class="config-option-title">2 - 立体声</div>
+                    <div class="config-option-desc">标准立体声</div>
+                    <div class="config-option-details">参数: -ac 2 | 适用于: 音乐、视频</div>
+                </div>
+                <div class="config-option" onclick="selectChannels('6')" id="ac-6">
+                    <div class="config-option-title">6 - 5.1 环绕声</div>
+                    <div class="config-option-desc">5.1 环绕声</div>
+                    <div class="config-option-details">参数: -ac 6 | 适用于: 电影</div>
+                </div>
+                <div class="config-option" onclick="selectChannels('8')" id="ac-8">
+                    <div class="config-option-title">8 - 7.1 环绕声</div>
+                    <div class="config-option-desc">7.1 环绕声</div>
+                    <div class="config-option-details">参数: -ac 8 | 适用于: 高端家庭影院</div>
+                </div>
+            </div>
+            
+            <!-- 音频比特率 -->
+            <div class="config-section">
+                <h3>📶 音频比特率 (-b:a)</h3>
+                <div class="config-option" onclick="toggleAudioFormat('aac')" id="audio-format-aac">
+                    <div class="config-option-title">AAC - 当前: <span id="aac-current-bitrate">320k</span></div>
+                    <div class="config-option-desc">点击展开/折叠AAC比特率选项</div>
+                </div>
+                <div id="aac-bitrate-options" style="display: none; margin-left: 20px;">
+                    <div class="config-option" onclick="selectAacBitrate('32k')" id="aac-br-32k">
+                        <div class="config-option-title">32 kbps - 极低质量</div>
+                        <div class="config-option-desc">极低音质，文件最小</div>
+                        <div class="config-option-details">参数: -b:a 32k | 适用于: 语音、低带宽</div>
+                    </div>
+                    <div class="config-option" onclick="selectAacBitrate('64k')" id="aac-br-64k">
+                        <div class="config-option-title">64 kbps - 低质量</div>
+                        <div class="config-option-desc">低音质，文件较小</div>
+                        <div class="config-option-details">参数: -b:a 64k | 适用于: 语音、播客</div>
+                    </div>
+                    <div class="config-option" onclick="selectAacBitrate('96k')" id="aac-br-96k">
+                        <div class="config-option-title">96 kbps - 中低质量</div>
+                        <div class="config-option-desc">中低音质</div>
+                        <div class="config-option-details">参数: -b:a 96k | 适用于: 流媒体</div>
+                    </div>
+                    <div class="config-option" onclick="selectAacBitrate('128k')" id="aac-br-128k">
+                        <div class="config-option-title">128 kbps - 标准质量</div>
+                        <div class="config-option-desc">标准音质</div>
+                        <div class="config-option-details">参数: -b:a 128k | 适用于: 在线音乐</div>
+                    </div>
+                    <div class="config-option" onclick="selectAacBitrate('160k')" id="aac-br-160k">
+                        <div class="config-option-title">160 kbps - 中等质量</div>
+                        <div class="config-option-desc">中等偏上音质</div>
+                        <div class="config-option-details">参数: -b:a 160k | 适用于: 流媒体</div>
+                    </div>
+                    <div class="config-option" onclick="selectAacBitrate('192k')" id="aac-br-192k">
+                        <div class="config-option-title">192 kbps - 高质量</div>
+                        <div class="config-option-desc">高质量</div>
+                        <div class="config-option-details">参数: -b:a 192k | 适用于: 高质量音乐</div>
+                    </div>
+                    <div class="config-option" onclick="selectAacBitrate('256k')" id="aac-br-256k">
+                        <div class="config-option-title">256 kbps - 很高质量</div>
+                        <div class="config-option-desc">很高音质</div>
+                        <div class="config-option-details">参数: -b:a 256k | 适用于: 无损音乐压缩</div>
+                    </div>
+                    <div class="config-option" onclick="selectAacBitrate('320k')" id="aac-br-320k">
+                        <div class="config-option-title">320 kbps - 超高质量</div>
+                        <div class="config-option-desc">超高质量AAC</div>
+                        <div class="config-option-details">参数: -b:a 320k | 适用于: 高保真AAC</div>
+                    </div>
+                    <div class="config-option" onclick="selectAacBitrate('384k')" id="aac-br-384k">
+                        <div class="config-option-title">384 kbps - 极高质量</div>
+                        <div class="config-option-desc">极高音质</div>
+                        <div class="config-option-details">参数: -b:a 384k | 适用于: 专业音频</div>
+                    </div>
+                    <div class="config-option" onclick="selectAacBitrate('512k')" id="aac-br-512k">
+                        <div class="config-option-title">512 kbps - 最高质量</div>
+                        <div class="config-option-desc">最高AAC质量</div>
+                        <div class="config-option-details">参数: -b:a 512k | 适用于: 专业母带</div>
+                    </div>
+                </div>
+                
+                <div class="config-option" onclick="toggleAudioFormat('mp3')" id="audio-format-mp3">
+                    <div class="config-option-title">MP3 - 当前: <span id="mp3-current-bitrate">320k</span></div>
+                    <div class="config-option-desc">点击展开/折叠MP3比特率选项</div>
+                </div>
+                <div id="mp3-bitrate-options" style="display: none; margin-left: 20px;">
+                    <div class="config-option" onclick="selectMp3Bitrate('32k')" id="mp3-br-32k">
+                        <div class="config-option-title">32 kbps - 极低质量</div>
+                        <div class="config-option-desc">极低音质，文件最小</div>
+                        <div class="config-option-details">参数: -b:a 32k | 适用于: 语音、低带宽</div>
+                    </div>
+                    <div class="config-option" onclick="selectMp3Bitrate('64k')" id="mp3-br-64k">
+                        <div class="config-option-title">64 kbps - 低质量</div>
+                        <div class="config-option-desc">低音质，文件较小</div>
+                        <div class="config-option-details">参数: -b:a 64k | 适用于: 语音、播客</div>
+                    </div>
+                    <div class="config-option" onclick="selectMp3Bitrate('96k')" id="mp3-br-96k">
+                        <div class="config-option-title">96 kbps - 中低质量</div>
+                        <div class="config-option-desc">中低音质</div>
+                        <div class="config-option-details">参数: -b:a 96k | 适用于: 流媒体</div>
+                    </div>
+                    <div class="config-option" onclick="selectMp3Bitrate('128k')" id="mp3-br-128k">
+                        <div class="config-option-title">128 kbps - 标准质量</div>
+                        <div class="config-option-desc">标准音质</div>
+                        <div class="config-option-details">参数: -b:a 128k | 适用于: 在线音乐</div>
+                    </div>
+                    <div class="config-option" onclick="selectMp3Bitrate('160k')" id="mp3-br-160k">
+                        <div class="config-option-title">160 kbps - 中等质量</div>
+                        <div class="config-option-desc">中等偏上音质</div>
+                        <div class="config-option-details">参数: -b:a 160k | 适用于: 流媒体</div>
+                    </div>
+                    <div class="config-option" onclick="selectMp3Bitrate('192k')" id="mp3-br-192k">
+                        <div class="config-option-title">192 kbps - 高质量</div>
+                        <div class="config-option-desc">高质量</div>
+                        <div class="config-option-details">参数: -b:a 192k | 适用于: 高质量音乐</div>
+                    </div>
+                    <div class="config-option" onclick="selectMp3Bitrate('224k')" id="mp3-br-224k">
+                        <div class="config-option-title">224 kbps - 很高质量</div>
+                        <div class="config-option-desc">很高音质</div>
+                        <div class="config-option-details">参数: -b:a 224k | 适用于: 无损音乐压缩</div>
+                    </div>
+                    <div class="config-option" onclick="selectMp3Bitrate('256k')" id="mp3-br-256k">
+                        <div class="config-option-title">256 kbps - 超高质量</div>
+                        <div class="config-option-desc">超高质量MP3</div>
+                        <div class="config-option-details">参数: -b:a 256k | 适用于: 高保真MP3</div>
+                    </div>
+                    <div class="config-option" onclick="selectMp3Bitrate('320k')" id="mp3-br-320k">
+                        <div class="config-option-title">320 kbps - 最高质量</div>
+                        <div class="config-option-desc">最高MP3质量</div>
+                        <div class="config-option-details">参数: -b:a 320k | 适用于: 高保真MP3 [标准]</div>
+                    </div>
+                </div>
+                
+                <div class="config-option" onclick="toggleAudioFormat('vorbis')" id="audio-format-vorbis">
+                    <div class="config-option-title">Vorbis - 当前: <span id="vorbis-current-bitrate">320k</span></div>
+                    <div class="config-option-desc">点击展开/折叠Vorbis比特率选项</div>
+                </div>
+                <div id="vorbis-bitrate-options" style="display: none; margin-left: 20px;">
+                    <div class="config-option" onclick="selectVorbisBitrate('45k')" id="vorbis-br-45k">
+                        <div class="config-option-title">45 kbps - 极低质量</div>
+                        <div class="config-option-desc">极低音质，文件最小</div>
+                        <div class="config-option-details">参数: -b:a 45k | 适用于: 语音、低带宽</div>
+                    </div>
+                    <div class="config-option" onclick="selectVorbisBitrate('64k')" id="vorbis-br-64k">
+                        <div class="config-option-title">64 kbps - 低质量</div>
+                        <div class="config-option-desc">低音质，文件较小</div>
+                        <div class="config-option-details">参数: -b:a 64k | 适用于: 语音、播客</div>
+                    </div>
+                    <div class="config-option" onclick="selectVorbisBitrate('96k')" id="vorbis-br-96k">
+                        <div class="config-option-title">96 kbps - 中低质量</div>
+                        <div class="config-option-desc">中低音质</div>
+                        <div class="config-option-details">参数: -b:a 96k | 适用于: 流媒体</div>
+                    </div>
+                    <div class="config-option" onclick="selectVorbisBitrate('128k')" id="vorbis-br-128k">
+                        <div class="config-option-title">128 kbps - 标准质量</div>
+                        <div class="config-option-desc">标准音质</div>
+                        <div class="config-option-details">参数: -b:a 128k | 适用于: 在线音乐</div>
+                    </div>
+                    <div class="config-option" onclick="selectVorbisBitrate('160k')" id="vorbis-br-160k">
+                        <div class="config-option-title">160 kbps - 中等质量</div>
+                        <div class="config-option-desc">中等偏上音质</div>
+                        <div class="config-option-details">参数: -b:a 160k | 适用于: 流媒体</div>
+                    </div>
+                    <div class="config-option" onclick="selectVorbisBitrate('192k')" id="vorbis-br-192k">
+                        <div class="config-option-title">192 kbps - 高质量</div>
+                        <div class="config-option-desc">高质量</div>
+                        <div class="config-option-details">参数: -b:a 192k | 适用于: 高质量音乐</div>
+                    </div>
+                    <div class="config-option" onclick="selectVorbisBitrate('224k')" id="vorbis-br-224k">
+                        <div class="config-option-title">224 kbps - 很高质量</div>
+                        <div class="config-option-desc">很高音质</div>
+                        <div class="config-option-details">参数: -b:a 224k | 适用于: 无损音乐压缩</div>
+                    </div>
+                    <div class="config-option" onclick="selectVorbisBitrate('256k')" id="vorbis-br-256k">
+                        <div class="config-option-title">256 kbps - 超高质量</div>
+                        <div class="config-option-desc">超高质量Vorbis</div>
+                        <div class="config-option-details">参数: -b:a 256k | 适用于: 高保真Vorbis</div>
+                    </div>
+                    <div class="config-option" onclick="selectVorbisBitrate('320k')" id="vorbis-br-320k">
+                        <div class="config-option-title">320 kbps - 极高质量</div>
+                        <div class="config-option-desc">极高音质</div>
+                        <div class="config-option-details">参数: -b:a 320k | 适用于: 专业音频</div>
+                    </div>
+                    <div class="config-option" onclick="selectVorbisBitrate('384k')" id="vorbis-br-384k">
+                        <div class="config-option-title">384 kbps - 极高质量</div>
+                        <div class="config-option-desc">极高音质</div>
+                        <div class="config-option-details">参数: -b:a 384k | 适用于: 专业音频</div>
+                    </div>
+                    <div class="config-option" onclick="selectVorbisBitrate('448k')" id="vorbis-br-448k">
+                        <div class="config-option-title">448 kbps - 极高质量</div>
+                        <div class="config-option-desc">极高音质</div>
+                        <div class="config-option-details">参数: -b:a 448k | 适用于: 专业音频</div>
+                    </div>
+                    <div class="config-option" onclick="selectVorbisBitrate('512k')" id="vorbis-br-512k">
+                        <div class="config-option-title">512 kbps - 最高质量</div>
+                        <div class="config-option-desc">最高Vorbis质量</div>
+                        <div class="config-option-details">参数: -b:a 512k | 适用于: 专业母带</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 无损音频位深度 -->
+            <div class="config-section">
+                <h3>🔊 无损音频位深度 (sample_fmt)</h3>
+                <div class="config-option" onclick="toggleAudioFormat('pcm')" id="audio-format-pcm">
+                    <div class="config-option-title">PCM - 当前: <span id="pcm-current-depth">16-bit</span></div>
+                    <div class="config-option-desc">点击展开/折叠PCM位深度选项</div>
+                </div>
+                <div id="pcm-depth-options" style="display: none; margin-left: 20px;">
+                    <div class="config-option" onclick="selectPcmBitDepth('pcm_u8')" id="pcm-u8">
+                        <div class="config-option-title">8-bit (pcm_u8) - 电话质量</div>
+                        <div class="config-option-desc">最低质量，文件最小</div>
+                        <div class="config-option-details">参数: -c:a pcm_u8 | 采样: 无符号8位 | 带宽: 176 kbps (44.1kHz/2ch) | 适用于: 语音、预览</div>
+                    </div>
+                    <div class="config-option" onclick="selectPcmBitDepth('pcm_s16le')" id="pcm-s16le">
+                        <div class="config-option-title">16-bit (pcm_s16le) - CD质量</div>
+                        <div class="config-option-desc">标准CD音质，兼容性最好</div>
+                        <div class="config-option-details">参数: -c:a pcm_s16le | 采样: 有符号16位小端序 | 带宽: 352 kbps (44.1kHz/2ch) | 适用于: CD、一般用途</div>
+                    </div>
+                    <div class="config-option" onclick="selectPcmBitDepth('pcm_s24le')" id="pcm-s24le">
+                        <div class="config-option-title">24-bit (pcm_s24le) - 专业质量 [默认]</div>
+                        <div class="config-option-desc">专业录音质量，动态范围更高</div>
+                        <div class="config-option-details">参数: -c:a pcm_s24le | 采样: 有符号24位小端序 | 带宽: 528 kbps (44.1kHz/2ch) | 适用于: 专业录音、母带</div>
+                    </div>
+                    <div class="config-option" onclick="selectPcmBitDepth('pcm_s32le')" id="pcm-s32le">
+                        <div class="config-option-title">32-bit (pcm_s32le) - 极高精度</div>
+                        <div class="config-option-desc">极高精度，用于后期制作</div>
+                        <div class="config-option-details">参数: -c:a pcm_s32le | 采样: 有符号32位小端序 | 带宽: 704 kbps (44.1kHz/2ch) | 适用于: 后期制作、音频处理</div>
+                    </div>
+                    <div class="config-option" onclick="selectPcmBitDepth('pcm_f32le')" id="pcm-f32le">
+                        <div class="config-option-title">32-bit Float (pcm_f32le) - 浮点精度</div>
+                        <div class="config-option-desc">浮点精度，专业音频处理</div>
+                        <div class="config-option-details">参数: -c:a pcm_f32le | 采样: 32位浮点小端序 | 带宽: 1411 kbps (44.1kHz/2ch) | 适用于: 专业音频处理、母带</div>
+                    </div>
+                    <div class="config-option" onclick="selectPcmBitDepth('pcm_s64le')" id="pcm-s64le">
+                        <div class="config-option-title">64-bit (pcm_s64le) - 超高精度</div>
+                        <div class="config-option-desc">64位定点精度，动态范围极大</div>
+                        <div class="config-option-details">参数: -c:a pcm_s64le | 采样: 有符号64位小端序 | 带宽: 2822 kbps (44.1kHz/2ch) | 适用于: 超高精度处理</div>
+                    </div>
+                    <div class="config-option" onclick="selectPcmBitDepth('pcm_f64le')" id="pcm-f64le">
+                        <div class="config-option-title">64-bit Float (pcm_f64le) - 双浮点精度</div>
+                        <div class="config-option-desc">双精度浮点，动态范围理论上无限</div>
+                        <div class="config-option-details">参数: -c:a pcm_f64le | 采样: 64位浮点小端序 | 带宽: 2822 kbps (44.1kHz/2ch) | 适用于: 科学计算、超高精度</div>
+                    </div>
+                </div>
+                
+                <div class="config-option" onclick="toggleAudioFormat('flac')" id="audio-format-flac">
+                    <div class="config-option-title">FLAC - 当前: <span id="flac-current-depth">16-bit</span></div>
+                    <div class="config-option-desc">点击展开/折叠FLAC位深度选项</div>
+                </div>
+                <div id="flac-depth-options" style="display: none; margin-left: 20px;">
+                    <div class="config-option" onclick="selectFlacBitDepth('flac_s16')" id="flac-s16">
+                        <div class="config-option-title">16-bit (s16) - CD质量</div>
+                        <div class="config-option-desc">标准CD音质，压缩后文件较小</div>
+                        <div class="config-option-details">参数: -c:a flac -sample_fmt s16 | 压缩率: ~50-60% | 适用于: 音乐存档</div>
+                    </div>
+                    <div class="config-option" onclick="selectFlacBitDepth('flac_s24')" id="flac-s24">
+                        <div class="config-option-title">24-bit (s32) - 专业质量 [默认]</div>
+                        <div class="config-option-desc">专业录音质量，动态范围更高</div>
+                        <div class="config-option-details">参数: -c:a flac -sample_fmt s32 | 压缩率: ~45-55% | 适用于: 专业录音、母带</div>
+                    </div>
+                    <div class="config-option" onclick="selectFlacBitDepth('flac_s32')" id="flac-s32">
+                        <div class="config-option-title">32-bit (s32) - 极高质量</div>
+                        <div class="config-option-desc">极高精度定点数，动态范围最大</div>
+                        <div class="config-option-details">参数: -c:a flac -sample_fmt s32 | 压缩率: ~40-50% | 适用于: 高精度母带制作</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 当前配置 -->
+            <div class="config-section">
+                <h3>📝 当前配置</h3>
+                <div id="currentConfig" style="background: #222; padding: 15px; border-radius: 5px; font-family: monospace; color: #4CAF50; font-size: 12px;">
+                    视频编码: copy<br>
+                    质量控制: N/A<br>
+                    速度预设: N/A<br>
+                    视频比特率: N/A<br>
+                    帧率: N/A<br>
+                    分辨率: copy<br>
+                    宽高比: copy<br>
+                    音频采样率: 44100 Hz<br>
+                    音频声道: 2<br>
+                    音频比特率: 192k
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="apply-btn" onclick="applyFfmpegConfig()">📦 应用配置</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="codecButtons" style="margin: 20px 0; display: none;">
+        <h3>选择音频格式播放：</h3>
+        <button class="codec-btn" onclick="playCodec(0)" id="btn0" disabled>1. AAC音频</button>
+        <button class="codec-btn" onclick="playCodec(1)" id="btn1" disabled>2. MP3音频</button>
+        <button class="codec-btn" onclick="playCodec(2)" id="btn2" disabled>3. Vorbis音频</button>
+        <button class="codec-btn" onclick="playCodec(3)" id="btn3" disabled>4. PCM无损</button>
+        <button class="codec-btn" onclick="playCodec(4)" id="btn4" disabled>5. FLAC无损</button>
+    </div>
+    
+    <div id="fileManager" style="margin: 30px 0; border-top: 2px solid #333; padding-top: 20px;">
+        <h2>📁 文件管理</h2>
+        <div style="margin: 15px 0;">
+            <button onclick="loadFileList()" style="background: #2196F3; color: white; border: none; border-radius: 5px;">🔄 刷新列表</button>
+            <button onclick="selectAll()" style="background: #FF9800; color: white; border: none; border-radius: 5px;">☑️ 全选</button>
+            <button onclick="deselectAll()" style="background: #FF9800; color: white; border: none; border-radius: 5px;">❌ 取消全选</button>
+            <button onclick="deleteSelected()" style="background: #f44336; color: white; border: none; border-radius: 5px;">🗑️ 删除选中</button>
+            <button onclick="deleteAll()" style="background: #d32f2f; color: white; border: none; border-radius: 5px;">⚠️ 清空所有</button>
+        </div>
+        <div id="fileStats" style="margin: 10px 0; color: #888; font-size: 14px;"></div>
+        <div id="fileList" style="margin-top: 15px;"></div>
+    </div>
+    
+    <div id="status"></div>
+    <video id="video" controls crossorigin="anonymous" preload="metadata" style="width: 100%; height: 100%; object-fit: contain;"></video>
+    
+    <script>
+        // 动态获取当前页面的协议和主机，支持localhost和IPv4访问
+        const BASE_URL = window.location.origin;
+
+        const fileInput = document.getElementById('fileInput');
+        const video = document.getElementById('video');
+        const status = document.getElementById('status');
+        const convertBtn = document.getElementById('convertBtn');
+        const codecButtons = document.getElementById('codecButtons');
+        let uploadedFile = null;
+        let uploadedFiles = []; // 存储文件夹中的所有文件
+        let convertedFiles = [];
+        let isBatchConvert = false; // 是否批量转换模式
+        
+        // FFmpeg配置
+        let ffmpegConfig = {
+            videoCodec: 'copy',
+            crf: 23,
+            preset: 'medium',
+            bitrate: 'N/A',
+            frameRate: 'N/A',
+            resolution: 'copy',
+            aspect: 'copy',
+            sampleRate: '48000',
+            channels: '2',
+            aacBitrate: '320k',
+            mp3Bitrate: '320k',
+            vorbisBitrate: '320k',
+            pcmBitDepth: 'pcm_s24le',
+            flacBitDepth: 'flac_s24'
+        };
+        
+        // 主题配置
+        let currentTheme = 'dark';
+        
+        function toggleTheme() {
+            const body = document.body;
+            const themeBtn = document.getElementById('themeBtn');
+            
+            if (currentTheme === 'dark') {
+                body.classList.remove('dark-theme');
+                body.classList.add('light-theme');
+                themeBtn.textContent = '☀️';
+                currentTheme = 'light';
+            } else {
+                body.classList.remove('light-theme');
+                body.classList.add('dark-theme');
+                themeBtn.textContent = '🌙';
+                currentTheme = 'dark';
+            }
+        }
+        
+        // 根据时间段自动切换主题
+        function autoSwitchThemeByTime() {
+            const now = new Date();
+            const hour = now.getHours();
+            const body = document.body;
+            const themeBtn = document.getElementById('themeBtn');
+            
+            // 早上8点到晚上6点使用浅色主题，晚上6点到早上8点使用深色主题
+            if (hour >= 8 && hour < 18) {
+                // 白天：浅色主题
+                body.classList.remove('dark-theme');
+                body.classList.add('light-theme');
+                themeBtn.textContent = '☀️';
+                currentTheme = 'light';
+            } else {
+                // 夜晚：深色主题
+                body.classList.remove('light-theme');
+                body.classList.add('dark-theme');
+                themeBtn.textContent = '🌙';
+                currentTheme = 'dark';
+            }
+        }
+        
+        // FFmpeg配置相关函数
+        function openFfmpegConfig() {
+            document.getElementById('ffmpegConfigModal').style.display = 'block';
+            updateConfigDisplay();
+        }
+        
+        function closeFfmpegConfig() {
+            document.getElementById('ffmpegConfigModal').style.display = 'none';
+        }
+        
+        // 随机颜色数组
+        const allColors = [
+            '#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#8B00FF', '#FF00FF',
+            '#FF1493', '#FF69B4', '#FFB6C1', '#FFA07A', '#00CED1', '#20B2AA', '#3CB371', '#2E8B57',
+            '#9400D3', '#8A2BE2', '#7B68EE', '#6495ED', '#FFD700', '#FFA500', '#FF8C00', '#FF4500',
+            '#32CD32', '#00FA9A', '#00FF7F', '#7FFF00', '#1E90FF', '#4169E1', '#0000CD', '#191970',
+            '#C71585', '#DB7093', '#F0E68C', '#BDB76B', '#9ACD32', '#6B8E23', '#FF6B6B', '#4ECDC4',
+            '#45B7D1', '#96CEB4', '#7FDBDA', '#6B73FF', '#A78BFA', '#C3A5FF', '#FFE66D', '#FF8E72',
+            '#FFAB91', '#8B5CF6', '#7C3AED', '#6D28D9', '#A0522D', '#CD853F', '#D2691E', '#BC8F8F',
+            '#F4A460', '#DAA520', '#B8860B', '#FF6347', '#FF4500', '#DC143C', '#B22222', '#8B0000'
+        ];
+        
+        // 随机颜色函数
+        function getRandomColor() {
+            return allColors[Math.floor(Math.random() * allColors.length)];
+        }
+        
+        // 更新圆环颜色
+        function updateRingColors() {
+            const closeBtn = document.querySelector('.close-modal');
+            if (!closeBtn) return;
+            
+            // 随机设置8个边框颜色
+            closeBtn.style.setProperty('--color-1', getRandomColor());
+            closeBtn.style.setProperty('--color-2', getRandomColor());
+            closeBtn.style.setProperty('--color-3', getRandomColor());
+            closeBtn.style.setProperty('--color-4', getRandomColor());
+            closeBtn.style.setProperty('--color-5', getRandomColor());
+            closeBtn.style.setProperty('--color-6', getRandomColor());
+            closeBtn.style.setProperty('--color-7', getRandomColor());
+            closeBtn.style.setProperty('--color-8', getRandomColor());
+        }
+        
+        // 启动随机颜色和旋转动画
+        function startRandomAnimation() {
+            setInterval(() => {
+                updateRingColors();
+            }, 800); // 每800毫秒切换一次颜色
+        }
+        
+        // 启动随机动画
+        startRandomAnimation();
+        
+        function selectVideoCodec(codec) {
+            ffmpegConfig.videoCodec = codec;
+            // 更新UI
+            document.querySelectorAll('[id^="video-"]').forEach(el => el.classList.remove('selected'));
+            document.getElementById('video-' + codec).classList.add('selected');
+            
+            // 显示/隐藏质量控制
+            const qualitySection = document.getElementById('qualitySection');
+            const presetSection = document.getElementById('presetSection');
+            const bitrateSection = document.getElementById('bitrateSection');
+            if (codec === 'copy') {
+                qualitySection.style.display = 'none';
+                presetSection.style.display = 'none';
+                bitrateSection.style.display = 'none';
+            } else {
+                qualitySection.style.display = 'block';
+                presetSection.style.display = 'block';
+                bitrateSection.style.display = 'block';
+            }
+            
+            updateConfigDisplay();
+        }
+        
+        function selectCRF(crf) {
+            ffmpegConfig.crf = crf;
+            // 更新UI
+            document.querySelectorAll('[id^="crf-"]').forEach(el => el.classList.remove('selected'));
+            document.getElementById('crf-' + crf).classList.add('selected');
+            updateConfigDisplay();
+        }
+        
+        function applyCustomCRF() {
+            const crf = parseInt(document.getElementById('customCRF').value);
+            if (crf >= 0 && crf <= 51) {
+                ffmpegConfig.crf = crf;
+                document.querySelectorAll('[id^="crf-"]').forEach(el => el.classList.remove('selected'));
+                updateConfigDisplay();
+            } else {
+                alert('CRF值必须在0-51之间');
+            }
+        }
+        
+        function selectBitrate(bitrate) {
+            ffmpegConfig.bitrate = bitrate;
+            document.querySelectorAll('[id^="br-"]').forEach(el => el.classList.remove('selected'));
+            document.getElementById('br-' + bitrate).classList.add('selected');
+            updateConfigDisplay();
+        }
+        
+        function applyCustomBitrate() {
+            const bitrate = document.getElementById('customBitrate').value;
+            if (bitrate) {
+                ffmpegConfig.bitrate = bitrate;
+                document.querySelectorAll('[id^="br-"]').forEach(el => el.classList.remove('selected'));
+                updateConfigDisplay();
+            }
+        }
+        
+        function selectFrameRate(frameRate) {
+            ffmpegConfig.frameRate = frameRate;
+            document.querySelectorAll('[id^="fr-"]').forEach(el => el.classList.remove('selected'));
+            // 只有当frameRate不是'N/A'时才尝试添加selected类
+            if (frameRate !== 'N/A') {
+                const element = document.getElementById('fr-' + frameRate);
+                if (element) {
+                    element.classList.add('selected');
+                }
+            }
+            updateConfigDisplay();
+        }
+        
+        function applyCustomFrameRate() {
+            const frameRate = document.getElementById('customFrameRate').value;
+            if (frameRate >= 1 && frameRate <= 240) {
+                ffmpegConfig.frameRate = frameRate;
+                document.querySelectorAll('[id^="fr-"]').forEach(el => el.classList.remove('selected'));
+                updateConfigDisplay();
+            } else {
+                alert('帧率必须在1-240之间');
+            }
+        }
+        
+        function selectResolution(resolution) {
+            ffmpegConfig.resolution = resolution;
+            document.querySelectorAll('[id^="res-"]').forEach(el => el.classList.remove('selected'));
+            // 只有当resolution不是'copy'时才尝试添加selected类
+            if (resolution !== 'copy') {
+                const element = document.getElementById('res-' + resolution);
+                if (element) {
+                    element.classList.add('selected');
+                }
+            }
+            updateConfigDisplay();
+        }
+        
+        function applyCustomResolution() {
+            const resolution = document.getElementById('customResolution').value;
+            if (resolution) {
+                ffmpegConfig.resolution = resolution;
+                document.querySelectorAll('[id^="res-"]').forEach(el => el.classList.remove('selected'));
+                updateConfigDisplay();
+            }
+        }
+        
+        function selectAspect(aspect) {
+            ffmpegConfig.aspect = aspect;
+            document.querySelectorAll('[id^="aspect-"]').forEach(el => el.classList.remove('selected'));
+            // 只有当aspect不是'copy'时才尝试添加selected类
+            if (aspect !== 'copy') {
+                const element = document.getElementById('aspect-' + aspect);
+                if (element) {
+                    element.classList.add('selected');
+                }
+            }
+            updateConfigDisplay();
+        }
+        
+        function selectChannels(channels) {
+            ffmpegConfig.channels = channels;
+            document.querySelectorAll('[id^="ac-"]').forEach(el => el.classList.remove('selected'));
+            document.getElementById('ac-' + channels).classList.add('selected');
+            updateConfigDisplay();
+        }
+        
+        function toggleAudioFormat(format) {
+            const optionsDiv = document.getElementById(format + '-bitrate-options') || document.getElementById(format + '-depth-options');
+            if (optionsDiv) {
+                optionsDiv.style.display = optionsDiv.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+        
+        function selectAacBitrate(bitrate) {
+            ffmpegConfig.aacBitrate = bitrate;
+            document.querySelectorAll('[id^="aac-br-"]').forEach(el => el.classList.remove('selected'));
+            document.getElementById('aac-br-' + bitrate).classList.add('selected');
+            document.getElementById('aac-current-bitrate').textContent = bitrate;
+            updateConfigDisplay();
+        }
+        
+        function selectMp3Bitrate(bitrate) {
+            ffmpegConfig.mp3Bitrate = bitrate;
+            document.querySelectorAll('[id^="mp3-br-"]').forEach(el => el.classList.remove('selected'));
+            document.getElementById('mp3-br-' + bitrate).classList.add('selected');
+            document.getElementById('mp3-current-bitrate').textContent = bitrate;
+            updateConfigDisplay();
+        }
+        
+        function selectVorbisBitrate(bitrate) {
+            ffmpegConfig.vorbisBitrate = bitrate;
+            document.querySelectorAll('[id^="vorbis-br-"]').forEach(el => el.classList.remove('selected'));
+            document.getElementById('vorbis-br-' + bitrate).classList.add('selected');
+            document.getElementById('vorbis-current-bitrate').textContent = bitrate;
+            updateConfigDisplay();
+        }
+        
+        function selectPcmBitDepth(bitDepth) {
+            ffmpegConfig.pcmBitDepth = bitDepth;
+            document.querySelectorAll('[id^="pcm-"]').forEach(el => el.classList.remove('selected'));
+            const element = document.getElementById('pcm-' + bitDepth.replace('pcm_', ''));
+            if (element) {
+                element.classList.add('selected');
+            }
+            // 更新当前值显示
+            let depthText = '16-bit';
+            if (bitDepth === 'pcm_s16le') depthText = '16-bit';
+            else if (bitDepth === 'pcm_s24le') depthText = '24-bit';
+            else if (bitDepth === 'pcm_s32le') depthText = '32-bit';
+            else if (bitDepth === 'pcm_u8') depthText = '8-bit';
+            else if (bitDepth === 'pcm_f32le') depthText = '32-bit Float';
+            else if (bitDepth === 'pcm_s64le') depthText = '64-bit';
+            else if (bitDepth === 'pcm_f64le') depthText = '64-bit Float';
+            const currentDepthElement = document.getElementById('pcm-current-depth');
+            if (currentDepthElement) {
+                currentDepthElement.textContent = depthText;
+            }
+            updateConfigDisplay();
+        }
+        
+        function selectFlacBitDepth(bitDepth) {
+            ffmpegConfig.flacBitDepth = bitDepth;
+            console.log('🎵 FLAC位深度已更新为:', bitDepth);
+            document.querySelectorAll('[id^="flac-"]').forEach(el => el.classList.remove('selected'));
+            const element = document.getElementById('flac-' + bitDepth.replace('flac_', ''));
+            if (element) {
+                element.classList.add('selected');
+            }
+            // 更新当前值显示
+            let depthText = '16-bit';
+            if (bitDepth === 'flac_s16') depthText = '16-bit';
+            else if (bitDepth === 'flac_s24') depthText = '24-bit';
+            else if (bitDepth === 'flac_s32') depthText = '32-bit';
+            const currentDepthElement = document.getElementById('flac-current-depth');
+            if (currentDepthElement) {
+                currentDepthElement.textContent = depthText;
+            }
+            updateConfigDisplay();
+        }
+        
+        function selectPreset(preset) {
+            ffmpegConfig.preset = preset;
+            // 更新UI
+            document.querySelectorAll('[id^="preset-"]').forEach(el => el.classList.remove('selected'));
+            document.getElementById('preset-' + preset).classList.add('selected');
+            updateConfigDisplay();
+        }
+        
+        function selectSampleRate(sampleRate) {
+            ffmpegConfig.sampleRate = sampleRate;
+            // 更新UI
+            document.querySelectorAll('[id^="sr-"]').forEach(el => el.classList.remove('selected'));
+            document.getElementById('sr-' + sampleRate).classList.add('selected');
+            updateConfigDisplay();
+        }
+        
+        function updateConfigDisplay() {
+            const configDisplay = document.getElementById('currentConfig');
+            let videoInfo = ffmpegConfig.videoCodec;
+            if (ffmpegConfig.videoCodec !== 'copy') {
+                videoInfo += ` (CRF: ${ffmpegConfig.crf}, Preset: ${ffmpegConfig.preset})`;
+            }
+            
+            configDisplay.innerHTML = `
+                视频编码: ${ffmpegConfig.videoCodec}<br>
+                质量控制: ${ffmpegConfig.videoCodec === 'copy' ? 'N/A' : ffmpegConfig.crf}<br>
+                速度预设: ${ffmpegConfig.videoCodec === 'copy' ? 'N/A' : ffmpegConfig.preset}<br>
+                视频比特率: ${ffmpegConfig.bitrate}<br>
+                帧率: ${ffmpegConfig.frameRate}<br>
+                分辨率: ${ffmpegConfig.resolution}<br>
+                宽高比: ${ffmpegConfig.aspect}<br>
+                音频采样率: ${ffmpegConfig.sampleRate} Hz<br>
+                音频声道: ${ffmpegConfig.channels}<br>
+                AAC: ${ffmpegConfig.aacBitrate}, MP3: ${ffmpegConfig.mp3Bitrate}, Vorbis: ${ffmpegConfig.vorbisBitrate}<br>
+                PCM: ${ffmpegConfig.pcmBitDepth}, FLAC: ${ffmpegConfig.flacBitDepth}
+            `;
+        }
+        
+        function applyFfmpegConfig() {
+            closeFfmpegConfig();
+            status.textContent = `✅ FFmpeg配置已应用！\n\n`;
+            status.textContent += `🎬 视频配置:\n`;
+            status.textContent += `   编码: ${ffmpegConfig.videoCodec}\n`;
+            if (ffmpegConfig.videoCodec !== 'copy') {
+                status.textContent += `   CRF: ${ffmpegConfig.crf}\n`;
+                status.textContent += `   预设: ${ffmpegConfig.preset}\n`;
+            }
+            if (ffmpegConfig.bitrate !== 'N/A') {
+                status.textContent += `   比特率: ${ffmpegConfig.bitrate}\n`;
+            }
+            if (ffmpegConfig.frameRate !== 'N/A') {
+                status.textContent += `   帧率: ${ffmpegConfig.frameRate} fps\n`;
+            }
+            if (ffmpegConfig.resolution !== 'copy') {
+                status.textContent += `   分辨率: ${ffmpegConfig.resolution}\n`;
+            }
+            if (ffmpegConfig.aspect !== 'copy') {
+                status.textContent += `   宽高比: ${ffmpegConfig.aspect}\n`;
+            }
+            status.textContent += `\n🎵 音频配置:\n`;
+            status.textContent += `   采样率: ${ffmpegConfig.sampleRate} Hz, 声道: ${ffmpegConfig.channels}\n`;
+            status.textContent += `   AAC: ${ffmpegConfig.aacBitrate}, MP3: ${ffmpegConfig.mp3Bitrate}, Vorbis: ${ffmpegConfig.vorbisBitrate}\n`;
+            status.textContent += `   PCM: ${ffmpegConfig.pcmBitDepth}, FLAC: ${ffmpegConfig.flacBitDepth}\n`;
+            status.className = 'success';
+        }
+        
+        // 点击模态框外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('ffmpegConfigModal');
+            if (event.target == modal) {
+                closeFfmpegConfig();
+            }
+        }
+        
+        // 初始化默认选择
+        document.addEventListener('DOMContentLoaded', function() {
+            selectVideoCodec('copy');
+            selectSampleRate('48000');
+            selectChannels('2');
+            selectAacBitrate('320k');
+            selectMp3Bitrate('320k');
+            selectVorbisBitrate('320k');
+            selectPcmBitDepth('pcm_s24le');
+            selectFlacBitDepth('flac_s24');
+            selectFrameRate('N/A');
+            selectResolution('copy');
+            selectAspect('copy');
+        });
+        
+        // 监听全屏变化事件
+        document.addEventListener('fullscreenchange', function() {
+            if (document.fullscreenElement) {
+                video.style.width = '100%';
+                video.style.height = '100%';
+                video.style.maxWidth = 'none';
+                video.style.objectFit = 'contain';
+            }
+        });
+        
+        document.addEventListener('webkitfullscreenchange', function() {
+            if (document.webkitFullscreenElement) {
+                video.style.width = '100%';
+                video.style.height = '100%';
+                video.style.maxWidth = 'none';
+                video.style.objectFit = 'contain';
+            }
+        });
+        
+        function handleFileSelect(event) {
+            uploadedFile = event.target.files[0];
+            isBatchConvert = false; // 重置批量模式
+            uploadedFiles = [];
+            
+            if (uploadedFile) {
+                const source = event.target.id === 'fileInputGallery' ? '图库' : '文件';
+                status.textContent = `已从${source}选择文件: ${uploadedFile.name}\n大小: ${(uploadedFile.size/1024/1024).toFixed(2)}MB\n`;
+                status.className = 'info';
+                convertBtn.disabled = false;
+                document.getElementById('quickConvertBtn').disabled = false;
+                codecButtons.style.display = 'none';
+            }
+        }
+        
+        function handleFolderSelect(event) {
+            const files = event.target.files;
+            const videoFiles = Array.from(files).filter(file => file.type.startsWith('video/'));
+            
+            if (videoFiles.length === 0) {
+                alert('所选文件夹中没有视频文件');
+                return;
+            }
+            
+            // 保存所有视频文件
+            uploadedFiles = videoFiles;
+            isBatchConvert = true;
+            
+            // 显示文件夹中的视频文件列表
+            status.textContent = `文件夹中找到 ${videoFiles.length} 个视频文件:\n`;
+            videoFiles.forEach((file, index) => {
+                status.textContent += `${index + 1}. ${file.name} (${(file.size/1024/1024).toFixed(2)}MB)\n`;
+            });
+            status.textContent += `\n点击"分割并转换"按钮开始批量转换\n`;
+            status.textContent += `点击"快速转换"按钮进行快速转换并播放\n`;
+            status.className = 'info';
+            
+            // 准备转换
+            uploadedFile = null;
+            convertBtn.disabled = false;
+            document.getElementById('quickConvertBtn').disabled = false;
+            codecButtons.style.display = 'none';
+        }
+        
+        async function batchConvert() {
+            status.textContent = `开始批量转换 ${uploadedFiles.length} 个视频文件...\n\n`;
+            status.className = 'info';
+            convertBtn.disabled = true;
+            
+            let successCount = 0;
+            let failCount = 0;
+            const totalFiles = uploadedFiles.length;
+            
+            // 显示初始进度
+            updateProgress(0, `准备处理 ${totalFiles} 个文件...`);
+            
+            for (let i = 0; i < uploadedFiles.length; i++) {
+                const file = uploadedFiles[i];
+                const progressPercent = Math.round(((i + 1) / totalFiles) * 100);
+                updateProgress(progressPercent, `处理 ${i + 1}/${totalFiles}: ${file.name}`);
+                
+                status.textContent += `\n[${i + 1}/${uploadedFiles.length}] 正在处理: ${file.name}\n`;
+                status.textContent += `文件大小: ${(file.size/1024/1024).toFixed(2)}MB\n`;
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('video', file);
+                    formData.append('ffmpegConfig', JSON.stringify(ffmpegConfig));
+                    
+                    const response = await fetch(`${BASE_URL}/api/convert-all`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('上传失败');
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        successCount++;
+                        status.textContent += `✅ 转换成功！生成了 ${result.files.length} 个文件\n`;
+                    } else {
+                        failCount++;
+                        status.textContent += `❌ 转换失败: ${result.message}\n`;
+                    }
+                } catch (error) {
+                    failCount++;
+                    status.textContent += `❌ 错误: ${error.message}\n`;
+                }
+                
+                // 等待一下，避免请求过快
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // 完成进度
+            updateProgress(100, '完成！');
+            setTimeout(() => {
+                hideProgress();
+            }, 1000);
+            
+            status.textContent += `\n${'='.repeat(50)}\n`;
+            status.textContent += `批量转换完成！\n`;
+            status.textContent += `成功: ${successCount} 个\n`;
+            status.textContent += `失败: ${failCount} 个\n`;
+            status.textContent += `${'='.repeat(50)}\n`;
+            status.className = successCount > 0 ? 'success' : 'error';
+            
+            convertBtn.disabled = false;
+            isBatchConvert = false;
+            uploadedFiles = [];
+            
+            // 自动刷新文件列表
+            loadFileList();
+        }
+        
+        async function convertAll() {
+            // 如果是批量转换模式
+            if (isBatchConvert && uploadedFiles.length > 0) {
+                await batchConvert();
+                return;
+            }
+            
+            // 单文件转换模式
+            if (!uploadedFile) return;
+            
+            status.textContent = '正在上传视频到服务器...\n';
+            status.className = 'info';
+            convertBtn.disabled = true;
+            
+            // 显示进度条
+            updateProgress(10, '上传中...');
+            
+            try {
+                const formData = new FormData();
+                formData.append('video', uploadedFile);
+                formData.append('ffmpegConfig', JSON.stringify(ffmpegConfig));
+                
+                updateProgress(30, '正在转换...');
+                
+                const response = await fetch(`${BASE_URL}/api/convert-all`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    hideProgress();
+                    throw new Error('上传失败');
+                }
+                
+                updateProgress(80, '生成文件中...');
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    convertedFiles = result.files;
+                    updateProgress(100, '完成！');
+                    
+                    setTimeout(() => {
+                        hideProgress();
+                    }, 1000);
+                    
+                    status.textContent += '✅ 分割转换完成！\n\n';
+                    status.textContent += '生成的文件:\n';
+                    convertedFiles.forEach((file, index) => {
+                        status.textContent += `${index + 1}. ${file.name} - ${file.description}\n`;
+                    });
+                    status.textContent += '\n点击下方按钮选择播放哪种音频格式\n';
+                    status.className = 'success';
+                    
+                    // 启用所有按钮
+                    codecButtons.style.display = 'block';
+                    for (let i = 0; i < 5; i++) {
+                        document.getElementById(`btn${i}`).disabled = false;
+                    }
+                } else {
+                    hideProgress();
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                hideProgress();
+                status.textContent += `❌ 错误: ${error.message}\n`;
+                status.className = 'error';
+                convertBtn.disabled = false;
+            }
+        }
+        
+        // 更新进度条
+        function updateProgress(percent, text) {
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            progressContainer.style.display = 'block';
+            progressFill.style.width = percent + '%';
+            progressText.textContent = text || percent + '%';
+        }
+        
+        // 隐藏进度条
+        function hideProgress() {
+            const progressContainer = document.getElementById('progressContainer');
+            progressContainer.style.display = 'none';
+        }
+        
+        // 快速转换并播放功能
+        async function quickConvert() {
+            // 如果是批量转换模式
+            if (isBatchConvert && uploadedFiles.length > 0) {
+                await batchQuickConvert();
+                return;
+            }
+            
+            // 单文件转换模式
+            if (!uploadedFile) return;
+            
+            status.textContent = '⚡ 正在快速转换...\n';
+            status.className = 'info';
+            document.getElementById('quickConvertBtn').disabled = true;
+            
+            // 显示初始进度
+            updateProgress(0, '准备上传...');
+            
+            try {
+                // 上传进度
+                const xhr = new XMLHttpRequest();
+                
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 20); // 上传占20%
+                        updateProgress(percent, `上传中 ${percent}%`);
+                    }
+                });
+                
+                xhr.addEventListener('load', () => {
+                    updateProgress(20, '上传完成，开始转换...');
+                });
+                
+                const formData = new FormData();
+                formData.append('video', uploadedFile);
+                formData.append('ffmpegConfig', JSON.stringify(ffmpegConfig));
+                
+                xhr.open('POST', `${BASE_URL}/api/convert-all`, true);
+                
+                const result = await new Promise((resolve, reject) => {
+                    xhr.onload = function() {
+                        if (xhr.status === 200) {
+                            updateProgress(100, '转换完成！');
+                            setTimeout(() => {
+                                hideProgress();
+                            }, 1000);
+                            resolve(JSON.parse(xhr.responseText));
+                        } else {
+                            hideProgress();
+                            reject(new Error('上传失败'));
+                        }
+                    };
+                    xhr.onerror = () => {
+                        hideProgress();
+                        reject(new Error('网络错误'));
+                    };
+                    xhr.send(formData);
+                });
+                
+                if (result.success) {
+                    convertedFiles = result.files;
+                    status.textContent += '✅ 快速转换完成！\n\n';
+                    status.textContent += `正在播放: ${convertedFiles[3].description} (PCM无损格式)\n`;
+                    status.className = 'success';
+                    
+                    // 直接播放PCM无损文件 (索引3)
+                    await playCodec(3);
+                    
+                    // 启用所有按钮以便用户切换其他格式
+                    codecButtons.style.display = 'block';
+                    for (let i = 0; i < 5; i++) {
+                        document.getElementById(`btn${i}`).disabled = false;
+                    }
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                status.textContent += `❌ 错误: ${error.message}\n`;
+                status.className = 'error';
+                document.getElementById('quickConvertBtn').disabled = false;
+            }
+        }
+        
+        // 批量快速转换功能
+        async function batchQuickConvert() {
+            status.textContent = `⚡ 开始批量快速转换 ${uploadedFiles.length} 个视频文件...\n\n`;
+            status.className = 'info';
+            document.getElementById('quickConvertBtn').disabled = true;
+            
+            let successCount = 0;
+            let failCount = 0;
+            let allConvertedFiles = [];
+            const totalFiles = uploadedFiles.length;
+            
+            // 显示初始进度
+            updateProgress(0, `准备处理 ${totalFiles} 个文件...`);
+            
+            for (let i = 0; i < uploadedFiles.length; i++) {
+                const file = uploadedFiles[i];
+                const progressPercent = Math.round(((i + 1) / totalFiles) * 100);
+                updateProgress(progressPercent, `处理 ${i + 1}/${totalFiles}: ${file.name}`);
+                
+                status.textContent += `\n[${i + 1}/${uploadedFiles.length}] 正在处理: ${file.name}\n`;
+                status.textContent += `文件大小: ${(file.size/1024/1024).toFixed(2)}MB\n`;
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('video', file);
+                    formData.append('ffmpegConfig', JSON.stringify(ffmpegConfig));
+                    
+                    const response = await fetch(`${BASE_URL}/api/convert-all`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('上传失败');
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        successCount++;
+                        allConvertedFiles = allConvertedFiles.concat(result.files);
+                        status.textContent += `✅ 转换成功！生成了 ${result.files.length} 个文件\n`;
+                    } else {
+                        failCount++;
+                        status.textContent += `❌ 转换失败: ${result.message}\n`;
+                    }
+                } catch (error) {
+                    failCount++;
+                    status.textContent += `❌ 错误: ${error.message}\n`;
+                }
+                
+                // 等待一下，避免请求过快
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            status.textContent += `\n${'='.repeat(50)}\n`;
+            status.textContent += `批量快速转换完成！\n`;
+            status.textContent += `成功: ${successCount} 个\n`;
+            status.textContent += `失败: ${failCount} 个\n`;
+            status.textContent += `${'='.repeat(50)}\n`;
+            status.className = successCount > 0 ? 'success' : 'error';
+            
+            // 更新进度条为完成状态
+            updateProgress(100, `完成！成功 ${successCount}/${totalFiles}`);
+            setTimeout(() => {
+                hideProgress();
+            }, 2000);
+            
+            // 如果有成功转换的文件，自动播放第一个文件的PCM无损格式
+            if (allConvertedFiles.length > 0) {
+                convertedFiles = allConvertedFiles;
+                status.textContent += `\n正在播放第一个文件的PCM无损格式...\n`;
+                
+                // 启用所有按钮以便用户切换其他格式
+                codecButtons.style.display = 'block';
+                for (let i = 0; i < 5; i++) {
+                    document.getElementById(`btn${i}`).disabled = false;
+                }
+                
+                // 播放第一个文件的PCM无损格式（索引3）
+                await playCodec(3);
+            }
+            
+            document.getElementById('quickConvertBtn').disabled = false;
+            isBatchConvert = false;
+            uploadedFiles = [];
+            
+            // 自动刷新文件列表
+            loadFileList();
+        }
+        
+        async function playCodec(index) {
+            if (index >= convertedFiles.length) return;
+            
+            const file = convertedFiles[index];
+            status.textContent = `正在播放: ${file.description}\n`;
+            status.className = 'info';
+            
+            try {
+                const response = await fetch(`${BASE_URL}/${file.path}`);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                video.src = blobUrl;
+                
+                await new Promise((resolve, reject) => {
+                    video.onerror = () => reject(new Error('播放失败'));
+                    video.onloadedmetadata = () => resolve();
+                });
+                
+                status.textContent = `✅ ${file.description} 播放成功！\n`;
+                status.textContent += `时长: ${video.duration.toFixed(2)}秒, 分辨率: ${video.videoWidth}x${video.videoHeight}\n`;
+                status.className = 'success';
+                video.play();
+            } catch (error) {
+                status.textContent = `❌ ${file.description} 播放失败\n`;
+                status.textContent += `错误: ${error.message}\n`;
+                if (video.error) {
+                    status.textContent += `错误代码: ${video.error.code}\n`;
+                    status.textContent += `错误信息: ${video.error.message}\n`;
+                }
+                status.className = 'error';
+            }
+        }
+        
+        // 文件管理功能
+        let allFiles = [];
+        let lastFileCount = 0;
+        let lastFileNames = '';
+        
+        async function loadFileList() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/files`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const currentFileNames = result.files.map(f => f.name + f.size).join(',');
+                    
+                    // 只在文件数量或内容变化时更新
+                    if (result.total !== lastFileCount || currentFileNames !== lastFileNames) {
+                        allFiles = result.files;
+                        displayFileList(allFiles);
+                        document.getElementById('fileStats').textContent = `共 ${result.total} 个文件`;
+                        lastFileCount = result.total;
+                        lastFileNames = currentFileNames;
+                    }
+                } else {
+                    console.error('获取文件列表失败:', result.message);
+                }
+            } catch (error) {
+                console.error('加载文件列表错误:', error);
+            }
+        }
+        
+        function displayFileList(files) {
+            const fileList = document.getElementById('fileList');
+            
+            if (files.length === 0) {
+                fileList.innerHTML = '<p style="color: #888; text-align: center;">暂无文件</p>';
+                return;
+            }
+            
+            fileList.innerHTML = files.map(file => `
+                <div class="file-item">
+                    <div class="checkbox-container">
+                        <input type="checkbox" class="file-checkbox" value="${file.name}">
+                    </div>
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-meta">
+                            格式: ${file.format} | 大小: ${file.size}MB | 创建时间: ${file.createTime}
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="file-btn play-btn" onclick="playFile('${file.path}')">▶️ 播放</button>
+                        <button class="file-btn download-btn" onclick="downloadFile('${file.path}', '${file.name}')">⬇️ 下载</button>
+                        <button class="file-btn delete-btn" onclick="deleteFile('${file.name}')">🗑️ 删除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function playFile(path) {
+            try {
+                const response = await fetch(`${BASE_URL}/${path}`);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                video.src = blobUrl;
+                video.play();
+                status.textContent = `正在播放: ${path}`;
+                status.className = 'info';
+            } catch (error) {
+                status.textContent = `播放失败: ${error.message}`;
+                status.className = 'error';
+            }
+        }
+        
+        async function downloadFile(path, filename) {
+            try {
+                const response = await fetch(`${BASE_URL}/${path}`);
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                alert('下载失败: ' + error.message);
+            }
+        }
+        
+        async function deleteFile(filename) {
+            if (!confirm(`确定要删除 ${filename} 吗？`)) return;
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/files/${filename}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    loadFileList();
+                    alert('删除成功');
+                } else {
+                    alert('删除失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('删除失败: ' + error.message);
+            }
+        }
+        
+        function selectAll() {
+            document.querySelectorAll('.file-checkbox').forEach(checkbox => {
+                checkbox.checked = true;
+            });
+        }
+        
+        function deselectAll() {
+            document.querySelectorAll('.file-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+        
+        async function deleteSelected() {
+            const checkboxes = document.querySelectorAll('.file-checkbox:checked');
+            
+            if (checkboxes.length === 0) {
+                alert('请先选择要删除的文件');
+                return;
+            }
+            
+            if (!confirm(`确定要删除选中的 ${checkboxes.length} 个文件吗？`)) return;
+            
+            const filenames = Array.from(checkboxes).map(cb => cb.value);
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/files/batch-delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filenames })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    loadFileList();
+                    alert(`已删除 ${result.deletedCount} 个文件`);
+                    if (result.errors.length > 0) {
+                        alert('部分文件删除失败:\n' + result.errors.join('\n'));
+                    }
+                } else {
+                    alert('删除失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('删除失败: ' + error.message);
+            }
+        }
+        
+        async function deleteAll() {
+            if (!confirm('⚠️ 警告：确定要清空所有文件吗？此操作不可恢复！')) return;
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/files`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    loadFileList();
+                    console.log(`已清空 ${result.deletedCount} 个文件`);
+                } else {
+                    alert('清空失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('清空失败: ' + error.message);
+            }
+        }
+        
+        // 页面加载时自动加载文件列表，并启动智能检测
+        window.onload = function() {
+            loadFileList();
+            // 每3秒检测文件变化
+            setInterval(loadFileList, 3000);
+            // 根据当前时间设置主题
+            autoSwitchThemeByTime();
+        };
+    </script>
+</body>
+</html>
