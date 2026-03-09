@@ -288,6 +288,29 @@
             border: 1px solid #e0e0e0;
             box-shadow: 0 8px 32px rgba(0,0,0,0.15);
         }
+        /* 视频播放器特殊样式 */
+        #videoPlayerModal .modal-content {
+            background: #000;
+            color: #fff;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        #videoPlayerModal .modal-content h2 {
+            color: #fff !important;
+        }
+        /* 浅色主题下视频播放器样式 */
+        body.light-theme #videoPlayerModal .modal-content {
+            background: #ffffff;
+            color: #1a1a1a;
+        }
+        body.light-theme #videoPlayerModal .modal-content h2 {
+            color: #1a1a1a !important;
+        }
+        body.light-theme #videoPlayerModal select {
+            background: #ffffff;
+            color: #1a1a1a;
+            border: 1px solid #e0e0e0;
+        }
         body.light-theme h2, body.light-theme h3 {
             color: #212121;
         }
@@ -355,7 +378,41 @@
         <button onclick="document.getElementById('folderInput').click()" style="padding: 12px 25px; background: #FF9800; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">📂 选择文件夹</button>
         <button onclick="quickConvert()" id="quickConvertBtn" disabled style="padding: 12px 25px; background: #9C27B0; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">⚡ 快速转换</button>
         <button onclick="openFfmpegConfig()" style="padding: 12px 25px; background: #FF5722; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">⚙️ FFmpeg配置</button>
+        <button onclick="playLocalVideos()" id="playBtn" disabled style="padding: 12px 25px; background: #E91E63; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">▶️ 本地播放</button>
         <input type="file" id="folderInput" webkitdirectory directory multiple style="display: none;" onchange="handleFolderSelect(event)">
+    </div>
+    
+    <!-- 视频播放器模态框 -->
+    <div id="videoPlayerModal" class="modal">
+        <span class="close-modal" onclick="closeVideoPlayer()">&times;</span>
+        <div class="modal-content" style="text-align: center;">
+            <h2 id="currentPlayingTitle">🎬 视频播放器</h2>
+            <div style="margin: 10px 0; font-size: 14px;">
+                <span id="videoInfo">播放速度: 1.0x | 帧率: -- fps</span>
+            </div>
+            <video id="localVideoPlayer" style="width: 100%; max-height: 70vh; margin: 20px 0;" controls></video>
+            <div style="margin: 20px 0;">
+                <button onclick="playPrevious()" id="prevBtn" disabled style="padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">⏮️ 上一个</button>
+                <button onclick="jumpBackward()" style="padding: 10px 20px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">⏪ -10s</button>
+                <button onclick="jumpForward()" style="padding: 10px 20px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">⏩ +10s</button>
+                <button onclick="playNext()" id="nextBtn" disabled style="padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">⏭️ 下一个</button>
+                <button onclick="toggleLoop()" id="loopBtn" style="padding: 10px 20px; background: #9C27B0; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px;">🔁 循环播放</button>
+            </div>
+            <div style="margin: 10px 0;">
+                <label style="margin-right: 10px;">播放速度:</label>
+                <select id="playbackSpeed" onchange="changePlaybackSpeed()" style="padding: 5px 10px; border-radius: 5px;">
+                    <option value="0.25">0.25x</option>
+                    <option value="0.5">0.5x</option>
+                    <option value="0.75">0.75x</option>
+                    <option value="1.0" selected>1.0x</option>
+                    <option value="1.25">1.25x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2.0">2.0x</option>
+                    <option value="3.0">3.0x</option>
+                </select>
+            </div>
+            <div id="playlistInfo" style="color: #888; margin-top: 10px;"></div>
+        </div>
     </div>
     
     <div class="progress-container" id="progressContainer">
@@ -1026,6 +1083,11 @@
         let convertedFiles = [];
         let isBatchConvert = false; // 是否批量转换模式
         
+        // 视频播放相关
+        let videoPlaylist = []; // 播放列表
+        let currentVideoIndex = 0; // 当前播放的视频索引
+        let isLoopMode = false; // 是否循环播放
+        
         // FFmpeg配置
         let ffmpegConfig = {
             videoCodec: 'copy',
@@ -1452,12 +1514,20 @@
             uploadedFiles = [];
             
             if (uploadedFile) {
+                // 如果是视频文件,添加到播放列表
+                if (uploadedFile.type && uploadedFile.type.startsWith('video/')) {
+                    uploadedFiles = [uploadedFile];
+                }
+                
                 const source = event.target.id === 'fileInputGallery' ? '图库' : '文件';
                 status.textContent = `已从${source}选择文件: ${uploadedFile.name}\n大小: ${(uploadedFile.size/1024/1024).toFixed(2)}MB\n`;
                 status.className = 'info';
                 convertBtn.disabled = false;
                 document.getElementById('quickConvertBtn').disabled = false;
                 codecButtons.style.display = 'none';
+                
+                // 启用播放按钮
+                document.getElementById('playBtn').disabled = uploadedFiles.length === 0;
             }
         }
         
@@ -1488,6 +1558,9 @@
             convertBtn.disabled = false;
             document.getElementById('quickConvertBtn').disabled = false;
             codecButtons.style.display = 'none';
+            
+            // 启用播放按钮
+            document.getElementById('playBtn').disabled = false;
         }
         
         async function batchConvert() {
@@ -2041,6 +2114,503 @@
             // 根据当前时间设置主题
             autoSwitchThemeByTime();
         };
+        
+        // ========== 视频播放功能 ==========
+        
+        function playLocalVideos() {
+            // 检查播放器是否已经打开且有视频
+            const videoPlayer = document.getElementById('localVideoPlayer');
+            const modal = document.getElementById('videoPlayerModal');
+            
+            // 如果播放器已经有视频源,检查播放列表是否变化
+            if (videoPlayer.src && videoPlaylist.length > 0) {
+                // 检查播放列表是否变化
+                const currentVideoNames = videoPlaylist.map(v => v.name).sort().join(',');
+                const newVideoNames = uploadedFiles
+                    .filter(f => f.type && f.type.startsWith('video/'))
+                    .map(f => f.name)
+                    .sort()
+                    .join(',');
+                
+                if (currentVideoNames === newVideoNames) {
+                    // 播放列表没变化,直接显示
+                    modal.style.display = 'block';
+                    return;
+                }
+            }
+            
+            // 收集所有视频文件
+            videoPlaylist = [];
+            
+            // 从uploadedFiles中收集视频文件
+            if (uploadedFiles && uploadedFiles.length > 0) {
+                uploadedFiles.forEach(file => {
+                    if (file.type && file.type.startsWith('video/')) {
+                        videoPlaylist.push({
+                            name: file.name,
+                            url: URL.createObjectURL(file),
+                            type: 'local'
+                        });
+                    }
+                });
+            }
+            
+            // 如果没有视频文件，显示提示
+            if (videoPlaylist.length === 0) {
+                alert('没有找到可播放的视频文件！请先选择图库、文件或文件夹。');
+                return;
+            }
+            
+            // 打开播放器
+            document.getElementById('videoPlayerModal').style.display = 'block';
+            currentVideoIndex = 0;
+            updatePlaylistInfo();
+            playVideo(0);
+        }
+        
+        function playVideo(index) {
+            if (index < 0 || index >= videoPlaylist.length) return;
+            
+            currentVideoIndex = index;
+            const videoPlayer = document.getElementById('localVideoPlayer');
+            const currentVideo = videoPlaylist[index];
+            
+            // 克隆并替换video元素以清除所有旧的事件监听器
+            const newVideoPlayer = videoPlayer.cloneNode(true);
+            videoPlayer.parentNode.replaceChild(newVideoPlayer, videoPlayer);
+            
+            // 重新获取视频元素引用
+            const player = document.getElementById('localVideoPlayer');
+            
+            // 清除之前的定时器
+            if (window.fpsUpdateInterval) {
+                clearInterval(window.fpsUpdateInterval);
+                window.fpsUpdateInterval = null;
+            }
+            
+            // 重置帧率计算状态
+            window.lastFrameCount = 0;
+            window.lastFpsTime = Date.now();
+            
+            player.src = currentVideo.url;
+            document.getElementById('currentPlayingTitle').textContent = `🎬 ${currentVideo.name}`;
+            
+            // 重置播放速度
+            player.playbackRate = 1.0;
+            document.getElementById('playbackSpeed').value = '1.0';
+            
+            // 自动播放
+            player.play().catch(err => {
+                console.error('播放失败:', err);
+            });
+            
+            // 监听视频元数据加载完成
+            player.onloadedmetadata = function() {
+                updateVideoInfo(0); // 初始化为0
+            };
+            
+            // 添加长按和点击事件监听
+            let longPressTimer = null;
+            let isLongPressActive = false;
+            let savedPlaybackRate = 1.0;
+            let savedPausedState = false;
+            let mouseDownTime = 0;
+            let hasMoved = false;
+            let startX = 0;
+            let startY = 0;
+            let wasLongPress = false; // 标记是否发生了长按
+            
+            // 禁用原生点击事件,我们自己处理
+            player.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }, true); // 阻止原生click事件
+            
+            player.addEventListener('mousedown', function(e) {
+                if (e.button !== 0) return; // 只响应左键
+                
+                mouseDownTime = Date.now();
+                isLongPressActive = false;
+                wasLongPress = false;
+                hasMoved = false;
+                savedPlaybackRate = player.playbackRate;
+                savedPausedState = player.paused;
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                // 启动长按定时器(无论播放还是暂停)
+                longPressTimer = setTimeout(function() {
+                    isLongPressActive = true;
+                    player.playbackRate = 3.0;
+                    document.getElementById('playbackSpeed').value = '3.0';
+                    // 如果暂停了,开始播放
+                    if (savedPausedState) {
+                        player.play().catch(err => {
+                            console.log('播放失败:', err);
+                        });
+                    }
+                }, 150); // 长按150ms后触发3倍速
+            });
+            
+            player.addEventListener('mousemove', function(e) {
+                // 检测鼠标移动
+                const moveX = Math.abs(e.clientX - startX);
+                const moveY = Math.abs(e.clientY - startY);
+                if (moveX > 5 || moveY > 5) {
+                    hasMoved = true;
+                }
+            });
+            
+            player.addEventListener('mouseup', function(e) {
+                clearTimeout(longPressTimer);
+                
+                const pressDuration = Date.now() - mouseDownTime;
+                
+                // 如果发生了长按(按压时间>=150ms)
+                if (isLongPressActive && pressDuration >= 150) {
+                    isLongPressActive = false;
+                    wasLongPress = true; // 标记发生了长按
+                    player.playbackRate = savedPlaybackRate;
+                    
+                    // 设置选择框的值
+                    const selectElement = document.getElementById('playbackSpeed');
+                    const options = selectElement.options;
+                    for (let i = 0; i < options.length; i++) {
+                        if (parseFloat(options[i].value) === savedPlaybackRate) {
+                            selectElement.selectedIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    // 无论之前是什么状态,松开后都继续播放
+                    player.play().catch(err => {
+                        console.log('恢复播放失败:', err);
+                    });
+                } else if (!hasMoved && pressDuration < 150) {
+                    // 短按且没有移动,立即触发暂停/播放
+                    isLongPressActive = false;
+                    wasLongPress = false;
+                    console.log('短按,触发暂停/播放: paused=' + player.paused);
+                    if (player.paused) {
+                        player.play();
+                    } else {
+                        player.pause();
+                    }
+                } else {
+                    isLongPressActive = false;
+                    wasLongPress = false;
+                }
+            });
+            
+            player.addEventListener('mouseleave', function() {
+                clearTimeout(longPressTimer);
+                
+                if (isLongPressActive) {
+                    isLongPressActive = false;
+                    player.playbackRate = savedPlaybackRate;
+                    
+                    // 设置选择框的值
+                    const selectElement = document.getElementById('playbackSpeed');
+                    const options = selectElement.options;
+                    for (let i = 0; i < options.length; i++) {
+                        if (parseFloat(options[i].value) === savedPlaybackRate) {
+                            selectElement.selectedIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    // 无论之前是什么状态,松开后都继续播放
+                    player.play().catch(err => {
+                        console.log('恢复播放失败:', err);
+                    });
+                }
+                hasMoved = false;
+            });
+            
+            // 添加触摸事件支持(移动端)
+            let touchDownTime = 0;
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchHasMoved = false;
+            let isSwiping = false;
+            
+            player.addEventListener('touchstart', function(e) {
+                isLongPressActive = false;
+                savedPlaybackRate = player.playbackRate;
+                touchDownTime = Date.now();
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                touchHasMoved = false;
+                isSwiping = false;
+                
+                // 如果视频在播放,启动长按定时器
+                if (!player.paused) {
+                    longPressTimer = setTimeout(function() {
+                        isLongPressActive = true;
+                        player.playbackRate = 3.0;
+                        document.getElementById('playbackSpeed').value = '3.0';
+                    }, 100); // 改为100ms
+                }
+            }, { passive: true });
+            
+            player.addEventListener('touchmove', function(e) {
+                // 检测触摸移动
+                const moveX = Math.abs(e.touches[0].clientX - touchStartX);
+                const moveY = Math.abs(e.touches[0].clientY - touchStartY);
+                
+                if (moveX > 5 || moveY > 5) {
+                    touchHasMoved = true;
+                }
+                
+                // 检测滑动快进快退
+                if (!isSwiping && moveX > 0) {
+                    const touchX = e.touches[0].clientX;
+                    const diffX = touchX - touchStartX;
+                    const screenWidth = window.innerWidth;
+                    
+                    // 滑动距离超过屏幕宽度的10%才触发跳转
+                    if (Math.abs(diffX) > screenWidth * 0.1) {
+                        isSwiping = true;
+                        if (diffX > 0) {
+                            // 向右滑动,向前跳转
+                            jumpForward();
+                        } else {
+                            // 向左滑动,向后跳转
+                            jumpBackward();
+                        }
+                    }
+                }
+            }, { passive: true });
+            
+            player.addEventListener('touchend', function(e) {
+                clearTimeout(longPressTimer);
+                
+                const touchDuration = Date.now() - touchDownTime;
+                
+                // 如果发生了长按(按压时间>=100ms)
+                if (isLongPressActive && touchDuration >= 100) {
+                    isLongPressActive = false;
+                    player.playbackRate = savedPlaybackRate;
+                    
+                    // 使用selectedIndex设置选择框的值
+                    const selectElement = document.getElementById('playbackSpeed');
+                    const options = selectElement.options;
+                    for (let i = 0; i < options.length; i++) {
+                        if (parseFloat(options[i].value) === savedPlaybackRate) {
+                            selectElement.selectedIndex = i;
+                            break;
+                        }
+                    }
+                } else if (!touchHasMoved && !isSwiping && touchDuration < 100) {
+                    // 短按且没有移动和滑动,立即触发暂停/播放
+                    isLongPressActive = false;
+                    if (player.paused) {
+                        player.play();
+                    } else {
+                        player.pause();
+                    }
+                } else {
+                    isLongPressActive = false;
+                    isSwiping = false;
+                }
+            });
+            
+            // 监听视频播放,重置帧率计算
+            player.onplay = function() {
+                console.log('视频开始播放,重置帧率计算');
+                window.lastFrameCount = 0;
+                window.lastFpsTime = Date.now();
+                
+                // 确保定时器存在
+                if (!window.fpsUpdateInterval) {
+                    console.log('重新创建帧率计算定时器');
+                    window.fpsUpdateInterval = setInterval(function() {
+                        // 只在视频播放时计算帧率
+                        if (player.paused || player.ended) {
+                            return;
+                        }
+                        
+                        // 使用浏览器的getVideoPlaybackQuality API获取真实播放帧率
+                        if (player.getVideoPlaybackQuality) {
+                            try {
+                                const quality = player.getVideoPlaybackQuality();
+                                if (quality) {
+                                    const currentTime = Date.now();
+                                    const timeDiff = (currentTime - window.lastFpsTime) / 1000;
+                                    
+                                    if (quality.totalVideoFrames && quality.totalVideoFrames > 0 && timeDiff > 0.3) {
+                                        const newFrameCount = quality.totalVideoFrames;
+                                        const framesRendered = newFrameCount - window.lastFrameCount;
+                                        
+                                        if (framesRendered > 0) {
+                                            const actualFps = Math.round(framesRendered / timeDiff);
+                                            
+                                            // 只显示合理的帧率范围(1-240)
+                                            if (actualFps >= 1 && actualFps <= 240) {
+                                                updateVideoInfo(actualFps);
+                                            }
+                                        }
+                                        
+                                        window.lastFrameCount = newFrameCount;
+                                        window.lastFpsTime = currentTime;
+                                    }
+                                }
+                            } catch (e) {
+                                console.log('获取视频质量信息失败');
+                            }
+                        }
+                    }, 300); // 每300毫秒更新一次
+                }
+                
+                // 获取初始帧数
+                if (player.getVideoPlaybackQuality) {
+                    try {
+                        const quality = player.getVideoPlaybackQuality();
+                        if (quality && quality.totalVideoFrames) {
+                            window.lastFrameCount = quality.totalVideoFrames;
+                            console.log('初始帧数:', window.lastFrameCount);
+                        }
+                    } catch (e) {
+                        console.log('获取初始帧数失败');
+                    }
+                }
+            };
+            
+            // 实时计算真实播放帧率
+            window.fpsUpdateInterval = setInterval(function() {
+                // 只在视频播放时计算帧率
+                if (player.paused || player.ended) {
+                    return;
+                }
+                
+                // 使用浏览器的getVideoPlaybackQuality API获取真实播放帧率
+                if (player.getVideoPlaybackQuality) {
+                    try {
+                        const quality = player.getVideoPlaybackQuality();
+                        if (quality) {
+                            const currentTime = Date.now();
+                            const timeDiff = (currentTime - window.lastFpsTime) / 1000;
+                            
+                            if (quality.totalVideoFrames && quality.totalVideoFrames > 0 && timeDiff > 0.3) {
+                                const newFrameCount = quality.totalVideoFrames;
+                                const framesRendered = newFrameCount - window.lastFrameCount;
+                                
+                                if (framesRendered > 0) {
+                                    const actualFps = Math.round(framesRendered / timeDiff);
+                                    
+                                    // 只显示合理的帧率范围(1-240)
+                                    if (actualFps >= 1 && actualFps <= 240) {
+                                        updateVideoInfo(actualFps);
+                                    }
+                                }
+                                
+                                window.lastFrameCount = newFrameCount;
+                                window.lastFpsTime = currentTime;
+                            }
+                        }
+                    } catch (e) {
+                        console.log('获取视频质量信息失败');
+                    }
+                }
+            }, 300); // 每300毫秒更新一次
+            
+            // 监听视频结束事件
+            player.onended = function() {
+                console.log('视频播放结束');
+                // 不要清除定时器,只是重置状态
+                updateVideoInfo(0);
+                
+                if (isLoopMode) {
+                    // 循环播放当前视频
+                    console.log('循环播放,重置到开头');
+                    player.currentTime = 0;
+                    player.play();
+                } else {
+                    // 播放下一个视频
+                    console.log('播放下一个视频');
+                    playNext();
+                }
+            };
+            
+            // 监听视频暂停
+            player.onpause = function() {
+                updateVideoInfo(0);
+            };
+            
+            updatePlaylistInfo();
+        }
+        
+        function updateVideoInfo(fps) {
+            const videoPlayer = document.getElementById('localVideoPlayer');
+            const playbackRate = videoPlayer.playbackRate.toFixed(2);
+            
+            document.getElementById('videoInfo').textContent = 
+                `播放速度: ${playbackRate}x | 帧率: ${fps} fps`;
+        }
+        
+        function changePlaybackSpeed() {
+            const videoPlayer = document.getElementById('localVideoPlayer');
+            const speed = parseFloat(document.getElementById('playbackSpeed').value);
+            videoPlayer.playbackRate = speed;
+        }
+        
+        function jumpBackward() {
+            const videoPlayer = document.getElementById('localVideoPlayer');
+            videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 10);
+        }
+        
+        function jumpForward() {
+            const videoPlayer = document.getElementById('localVideoPlayer');
+            videoPlayer.currentTime = Math.min(videoPlayer.duration, videoPlayer.currentTime + 10);
+        }
+        
+        function playNext() {
+            if (currentVideoIndex < videoPlaylist.length - 1) {
+                playVideo(currentVideoIndex + 1);
+            } else if (isLoopMode) {
+                // 循环模式：从第一个开始
+                playVideo(0);
+            }
+        }
+        
+        function playPrevious() {
+            if (currentVideoIndex > 0) {
+                playVideo(currentVideoIndex - 1);
+            } else if (isLoopMode) {
+                // 循环模式：从最后一个开始
+                playVideo(videoPlaylist.length - 1);
+            }
+        }
+        
+        function toggleLoop() {
+            isLoopMode = !isLoopMode;
+            const loopBtn = document.getElementById('loopBtn');
+            if (isLoopMode) {
+                loopBtn.style.background = '#4CAF50';
+                loopBtn.textContent = '🔁 循环播放: 开';
+            } else {
+                loopBtn.style.background = '#9C27B0';
+                loopBtn.textContent = '🔁 循环播放';
+            }
+        }
+        
+        function updatePlaylistInfo() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            prevBtn.disabled = currentVideoIndex === 0 && !isLoopMode;
+            nextBtn.disabled = currentVideoIndex === videoPlaylist.length - 1 && !isLoopMode;
+            
+            document.getElementById('playlistInfo').textContent = 
+                `播放列表: ${videoPlaylist.length} 个视频 | 当前: ${currentVideoIndex + 1}/${videoPlaylist.length}`;
+        }
+        
+        function closeVideoPlayer() {
+            const videoPlayer = document.getElementById('localVideoPlayer');
+            // 暂停视频,但不清空src
+            videoPlayer.pause();
+            document.getElementById('videoPlayerModal').style.display = 'none';
+        }
     </script>
 </body>
 </html>
