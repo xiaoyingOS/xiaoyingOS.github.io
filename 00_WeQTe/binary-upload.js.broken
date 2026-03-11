@@ -1,0 +1,421 @@
+// 二进制分块上传实现
+window.uploadFileWithBinaryChunks = async function uploadFileWithBinaryChunks(file) {
+    if (!appState.connectedUser) {
+        showNotification('请先连接到用户', 'error');
+        return;
+    }
+    
+    try {
+        showNotification(`开始上传文件: ${file.name}`, 'info');
+        
+        // 计算文件SHA256作为ID
+        const fileId = await chunkUploader.calculateFileId(file);
+        console.log(`文件ID (SHA256): ${fileId}`);
+        
+        // 分割文件
+        const chunks = chunkUploader.splitFile(file);
+        console.log(`文件分块数量: ${chunks.length}`);
+        
+        // 创建上传状态
+        const uploadState = chunkUploader.createUploadState(file, fileId, chunks);
+        
+        // 添加到活跃传输列表
+        if (typeof activeTransfers !== 'undefined') {
+            activeTransfers.set(fileId, {
+                type: 'send',
+                cancelled: false,
+                fileName: file.name
+            });
+        }
+        
+        // 显示上传进度条
+        showUploadChunkTransferStatus(file.name, 0, chunks.length);
+        
+        // 类似base64的递归发送方式 - 真正的边发边收
+        let currentChunkIndex = 0;
+        
+        // 注册到全局队列管理
+        if (typeof window !== 'undefined') {
+            window.uploadQueues = window.uploadQueues || {};
+            window.uploadQueues[fileId] = chunks;
+        }
+        
+        // 递归发送函数
+        async function sendNextChunk() {
+            // 强制取消检查 - 多重检查确保立即停止
+            const transfer = activeTransfers?.get(fileId);
+            const globalCancelled = typeof window !== 'undefined' && window.uploadCancelled;
+            const globalTransferCancelled = typeof window !== 'undefined' && window.isTransferCancelled;
+            
+            // 如果任何一个取消标志为true，立即停止
+            if (transfer?.cancelled || globalCancelled || globalTransferCancelled) {
+                console.log(`强制检查：传输已取消，立即停止发送chunk ${currentChunkIndex}`);
+            
+            if (transfer?.cancelled || globalCancelled) {
+                console.log(`传输已取消，立即停止发送chunk ${currentChunkIndex}`);
+                
+                // 立即发送取消信号给接收方 - 使用高优先级发送
+                const cancelSignal = {
+                    type: 'transfer_cancelled',
+                    data: {
+                        fileId: fileId,
+                        senderId: appState.currentUser.id,
+                        targetUserId: appState.connectedUser.id,
+                        priority: 'high' // 添加优先级标识
+                    }
+                };
+                
+                // 使用WebSocket直接发送，确保优先级
+                if (appState.websocket && appState.websocket.readyState === WebSocket.OPEN) {
+                    // 立即发送取消信号
+                    appState.websocket.send(JSON.stringify(cancelSignal));
+                    console.log('取消信号已通过WebSocket高优先级发送');
+                    
+                    // 强制刷新WebSocket缓冲区，确保消息立即发送
+                    if (appState.websocket.bufferedAmount > 0) {
+                        console.log('WebSocket缓冲区有数据，强制刷新');
+                    }
+                } else {
+                    sendServerMessage(cancelSignal);
+                }
+                
+                // 立即清理状态
+                if (typeof activeTransfers !== 'undefined') {
+                    activeTransfers.delete(fileId);
+                }
+                if (typeof window !== 'undefined' && window.uploadQueues) {
+                    delete window.uploadQueues[fileId];
+                }
+                
+                // 隐藏进度条
+                const statusElement = document.getElementById("uploadChunkTransferStatus");
+                if (statusElement) {
+                    statusElement.classList.remove("show");
+                }
+                
+                showNotification("文件上传已取消", "info");
+                return;
+            }
+            
+            if (currentChunkIndex >= chunks.length) {
+                console.log(`所有chunks发送完成，发送完成信号`);
+                
+                // 发送完成信号
+                const completeMessage = {
+                    type: 'uploadComplete',
+                    data: {
+                        fileId: fileId,
+                        fileName: file.name,
+                        fileSize: file.size,
+                        totalChunks: chunks.length,
+                        senderId: appState.currentUser.id,
+                        targetUserId: appState.connectedUser.id
+                    }
+                };
+                
+                sendServerMessage(completeMessage);
+                showNotification(`文件 ${file.name} 上传完成`, 'success');
+                
+                // 确保进度条显示100%
+                updateUploadChunkProgress(chunks.length, chunks.length);
+                
+                // 隐藏进度条
+                setTimeout(() => {
+                    const statusElement = document.getElementById("uploadChunkTransferStatus");
+                    if (statusElement) {
+                        statusElement.classList.remove("show");
+                    }
+                }, 2000);
+                
+                return;
+            }
+            
+            const chunk = chunks[currentChunkIndex];
+            
+            try {
+                console.log(`开始处理chunk ${currentChunkIndex + 1}/${chunks.length}`);
+                
+                // 在发送前进行多重取消检查
+                const globalCancelled = typeof window !== 'undefined' && window.uploadCancelled;
+                const globalTransferCancelled = typeof window !== 'undefined' && window.isTransferCancelled;
+                const currentTransfer = activeTransfers?.get(fileId);
+                
+                if (globalCancelled || globalTransferCancelled || currentTransfer?.cancelled) {
+                    console.log(`传输已取消，立即停止发送chunk ${currentChunkIndex}`);
+                    return;
+                }
+                
+                // 准备chunk消息
+                const chunkMessage = await chunkUploader.uploadChunk(fileId, chunk, uploadState);
+                
+                // 再次检查取消状态 - 发送前的最后检查
+                const reCheckCancelled = typeof window !== 'undefined' && window.uploadCancelled;
+                const reCheckTransferCancelled = typeof window !== 'undefined' && window.isTransferCancelled;
+                const reCheckTransfer = activeTransfers?.get(fileId);
+                
+                if (reCheckCancelled || reCheckTransferCancelled || reCheckTransfer?.cancelled) {
+                    console.log(`传输已取消，跳过发送chunk ${currentChunkIndex}`);
+                    return;
+                }
+                
+                // 添加发送者和接收者信息
+                chunkMessage.data.senderId = appState.currentUser.id;
+                chunkMessage.data.targetUserId = appState.connectedUser.id;
+                
+                // 立即发送chunk
+                const success = sendServerMessage(chunkMessage);
+                if (!success) {
+                    throw new Error(`发送chunk ${currentChunkIndex}失败`);
+                }
+                
+                console.log(`Chunk ${currentChunkIndex + 1}/${chunks.length} 已发送到服务器`);
+                
+                // 手动更新上传状态
+                chunkUploader.uploadStates.get(fileId).uploadedChunks.add(chunk.index);
+                
+                // 更新进度 - 使用currentChunkIndex + 1作为已完成数量
+                updateUploadChunkProgress(currentChunkIndex + 1, chunks.length);
+                
+                currentChunkIndex++;
+                
+                // 减少延迟，提高实时性，但仍然给接收方处理时间
+                setTimeout(sendNextChunk, 20); // 减少到20ms延迟，提高实时性
+                
+            } catch (error) {
+                console.error(`Chunk ${currentChunkIndex} 处理失败:`, error);
+            }
+        
+        // 开始发送第一个chunk
+        sendNextChunk();
+    } catch (error) {
+        console.error('文件上传失败:', error);
+        showNotification(`文件上传失败: ${error.message}`, 'error');
+        
+        // 清理状态
+        if (currentTransferId) {
+            chunkUploader.cancelUpload(currentTransferId);
+            currentTransferId = null;
+            currentTransferType = null;
+        }
+    }
+}
+
+// 处理接收到的二进制chunk
+async function handleBinaryChunk(chunkData) {
+    const { fileId, chunkIndex, totalChunks, chunkSize, chunkHash, fileName, fileSize, binaryData } = chunkData.data;
+    
+    // 第一时间检查全局取消状态 - 最高优先级
+    if ((typeof window !== 'undefined' && window.isTransferCancelled) || 
+        isTransferCancelled || 
+        (currentTransferId === fileId && isTransferCancelled)) {
+        console.log("传输已取消，立即忽略chunk:", fileId, "chunkIndex:", chunkIndex);
+        return;
+    }
+    
+    // 检查是否是新的传输
+    const isNewTransfer = !currentTransferId || currentTransferId !== fileId;
+    
+    if (isNewTransfer) {
+        console.log("开始新的二进制文件接收:", fileId);
+        currentTransferId = fileId;
+        currentTransferType = "receive";
+        isTransferCancelled = false;
+        
+        // 初始化接收状态
+        if (!fileTransferMap.has(fileId)) {
+            fileTransferMap.set(fileId, {
+                name: fileName,
+                size: fileSize,
+                totalChunks: totalChunks,
+                receivedChunks: new Set(),
+                chunkData: new Map(),
+                chunkHashes: new Map()
+            });
+        }
+    }
+    
+    // 再次检查取消状态 - 双重保险
+    if (isTransferCancelled && currentTransferId === fileId) {
+        console.log("接收已取消，忽略chunk:", fileId);
+        return;
+    }
+    
+    const transfer = fileTransferMap.get(fileId);
+    if (!transfer) {
+        console.error("传输状态不存在:", fileId);
+        return;
+    }
+    
+    try {
+        // 验证chunk完整性
+        const uint8Array = new Uint8Array(binaryData);
+        const receivedHash = await chunkUploader.calculateChunkHash(uint8Array.buffer);
+        
+        if (receivedHash !== chunkHash) {
+            console.error(`Chunk ${chunkIndex} 哈希验证失败`);
+            return;
+        }
+        
+        // 存储chunk数据
+        transfer.chunkData.set(chunkIndex, uint8Array);
+        transfer.receivedChunks.add(chunkIndex);
+        transfer.chunkHashes.set(chunkIndex, chunkHash);
+        
+        // 更新进度
+        showChunkTransferStatus(`接收: ${fileName}`, transfer.receivedChunks.size, totalChunks);
+        updateChunkProgress(transfer.receivedChunks.size, totalChunks);
+        
+        // 检查是否接收完成
+        if (transfer.receivedChunks.size === totalChunks) {
+            await mergeBinaryChunks(fileId);
+        }
+        
+    } catch (error) {
+        console.error('处理binary chunk失败:', error);
+    }
+}
+
+// 添加立即处理取消信号的函数
+function handleTransferCancelledImmediate(cancelData) {
+    const { fileId } = cancelData.data;
+    console.log('立即处理传输取消信号:', fileId);
+    
+    // 立即设置取消标志
+    isTransferCancelled = true;
+    
+    // 立即清理相关状态
+    if (currentTransferId === fileId) {
+        currentTransferId = null;
+        currentTransferType = null;
+    }
+    
+    // 清理传输映射
+    fileTransferMap.delete(fileId);
+    activeTransfers?.delete(fileId);
+    
+    // 立即隐藏进度条
+    const statusElement = document.getElementById("chunkTransferStatus");
+    if (statusElement) {
+        statusElement.classList.remove("show");
+    }
+    
+    // 立即显示通知
+    showNotification("文件传输已取消", "info");
+    
+    console.log('传输取消信号处理完成:', fileId);
+}
+
+// 合并二进制chunks
+async function mergeBinaryChunks(fileId) {
+    const transfer = fileTransferMap.get(fileId);
+    if (!transfer) {
+        console.error('找不到传输状态:', fileId);
+        return;
+    }
+    
+    try {
+        console.log('开始合并二进制chunks:', fileId);
+        
+        // 按顺序合并chunks
+        const totalSize = transfer.size;
+        const mergedArray = new Uint8Array(totalSize);
+        let offset = 0;
+        
+        for (let i = 0; i < transfer.totalChunks; i++) {
+            const chunkData = transfer.chunkData.get(i);
+            if (!chunkData) {
+                throw new Error(`缺少chunk ${i}`);
+            }
+            
+            mergedArray.set(chunkData, offset);
+            offset += chunkData.length;
+        }
+        
+        // 创建Blob
+        const blob = new Blob([mergedArray], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        
+        // 添加文件消息到聊天
+        addFileMessage(transfer.name, transfer.size, url, true);
+        
+        // 清理状态
+        fileTransferMap.delete(fileId);
+        currentTransferId = null;
+        currentTransferType = null;
+        
+        showNotification(`文件 "${transfer.name}" 接收完成`, 'success');
+        
+        // 隐藏进度条
+        setTimeout(() => {
+            const statusElement = document.getElementById("chunkTransferStatus");
+            if (statusElement) {
+                statusElement.classList.remove("show");
+            }
+        }, 2000);
+        
+    } catch (error) {
+        console.error('合并二进制chunks失败:', error);
+        showNotification('文件合并失败', 'error');
+    }
+}
+
+// 处理上传完成信号
+function handleUploadComplete(messageData) {
+    const { fileId, fileName, fileSize, totalChunks } = messageData;
+    
+    console.log('收到上传完成信号:', fileName);
+    
+    // 创建文件消息（接收方）
+    addFileMessage(fileName, fileSize, null, true);
+    
+    showNotification(`文件 "${fileName}" 已上传完成`, 'success');
+}
+
+// 更新handleServerMessage以支持新的消息类型
+function enhanceHandleServerMessage() {
+    const originalHandleServerMessage = window.handleServerMessage;
+    
+    window.handleServerMessage = function(message) {
+        // 绝对优先处理取消信号 - 最高优先级，立即返回
+        if (message.type === 'transfer_cancelled') {
+            if (message.data.senderId === appState.connectedUser?.id) {
+                console.log('收到绝对优先级取消信号，立即处理并阻止其他消息');
+                handleTransferCancelledImmediate(message);
+                return; // 立即返回，不处理任何其他消息
+            }
+        }
+        
+        // 在处理任何其他消息前，先检查全局取消状态
+        if ((typeof window !== 'undefined' && window.isTransferCancelled) || isTransferCancelled) {
+            console.log('传输已取消，忽略所有非取消消息:', message.type);
+            return;
+        }
+        
+        // 处理原有消息类型
+        originalHandleServerMessage(message);
+        
+        // 处理新的二进制chunk消息 - 检查取消状态
+        if (message.type === 'binaryChunk') {
+            if (message.data.senderId === appState.connectedUser?.id) {
+                // 在处理chunk前再次检查取消状态
+                if (!isTransferCancelled && !(typeof window !== 'undefined' && window.isTransferCancelled)) {
+                    handleBinaryChunk(message);
+                } else {
+                    console.log('传输已取消，忽略chunk消息');
+                }
+            }
+        }
+        
+        // 处理上传完成信号
+        if (message.type === 'uploadComplete') {
+            if (message.data.senderId === appState.connectedUser?.id) {
+                handleUploadComplete(message.data);
+            }
+        }
+    };
+}
+
+// 初始化增强的消息处理
+if (typeof window !== 'undefined') {
+    enhanceHandleServerMessage();
+}

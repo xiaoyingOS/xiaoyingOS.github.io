@@ -1,0 +1,20 @@
+// 处理文件选择 - 使用拖拽功能的handleFiles函数
+        function processFile(event) {
+            const files = event.target.files;
+            if (files.length === 0) {
+                return;
+            }
+
+            if (!appState.isConnected) {
+                showNotification('请先建立连接', 'warning');
+                return;
+            }
+
+            if (!appState.isServerConnected) {
+                showNotification('服务器连接已断开，无法发送文件', 'warning');
+                return;
+            }
+
+            // 使用binary-upload.js中的handleFiles函数处理文件
+            handleFiles(files);
+        }

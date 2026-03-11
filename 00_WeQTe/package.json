@@ -1,0 +1,13 @@
+{
+  "name": "qq-chat-system",
+  "version": "1.0.0",
+  "description": "实时聊天系统",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start-https": "node server-https.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  }
+}
