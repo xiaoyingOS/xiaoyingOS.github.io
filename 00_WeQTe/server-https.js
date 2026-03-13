@@ -570,30 +570,49 @@ function broadcastToOtherUsers(excludeUserId, message) {
 server.listen(port, '0.0.0.0', () => {
     const os = require('os');
     const interfaces = os.networkInterfaces();
-    let ipv4Address = '';
+    let ipv4Address = 'localhost';
 
-    // 获取本机IPv4地址
-    for (let name of Object.keys(interfaces)) {
-        for (let iface of interfaces[name]) {
-            if (iface.family === 'IPv4' && !iface.internal) {
-                ipv4Address = iface.address;
-                break;
+    // 获取本机IPv4地址 - 使用优先级策略
+    // 优先级策略：WLAN > Wi-Fi > wlan > WiFi > 其他非内部网卡
+    const interfacePriority = ['WLAN', 'Wi-Fi', 'wlan', 'WiFi', 'wlan0', 'wlan1', 'wlan2'];
+
+    // 先尝试按优先级查找
+    for (const priorityName of interfacePriority) {
+        if (interfaces[priorityName]) {
+            for (const iface of interfaces[priorityName]) {
+                if (iface.family === 'IPv4' && !iface.internal) {
+                    ipv4Address = iface.address;
+                    break;
+                }
             }
+            if (ipv4Address !== 'localhost') break;
         }
-        if (ipv4Address) break;
+    }
+
+    // 如果没找到，使用第一个非内部IPv4地址
+    if (ipv4Address === 'localhost') {
+        for (const name of Object.keys(interfaces)) {
+            for (const iface of interfaces[name]) {
+                if (iface.family === 'IPv4' && !iface.internal) {
+                    ipv4Address = iface.address;
+                    break;
+                }
+            }
+            if (ipv4Address !== 'localhost') break;
+        }
     }
 
     console.log(`聊天应用HTTPS服务器已启动`);
     console.log(`访问地址: https://localhost:${port}/`);
-    console.log(`手机访问: https://0.0.0.0:${port}/`);
+    console.log(`网关访问: https://0.0.0.0:${port}/`);
     console.log(`IPv4访问: https://${ipv4Address}:${port}/`);
     console.log(`WebSocket服务: wss://localhost:${port}/`);
     console.log(`\n=========================================`);
     console.log(`语音视频功能使用说明：`);
-    console.log(`1. 直接打开HTML文件（推荐）：`);
+    console.log(`1. 直接打开HTML文件（无法使用）：`);
     console.log(`   - 在文件管理器中找到 chat.html`);
-    console.log(`   - 双击打开，语音视频功能完全可用`);
-    console.log(`\n2. 通过HTTPS访问：`);
+    console.log(`   - 双击打开，所有功能用不了`);
+    console.log(`\n2. 通过HTTPS访问（推荐）：`);
     console.log(`   - 浏览器会提示证书不安全，点击"高级"然后"继续访问"`);
     console.log(`   - 语音视频功能完全可用`);
     console.log(`\n3. HTTP访问（不推荐）：`);

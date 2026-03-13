@@ -1,126 +1,5 @@
 #!/bin/bash
 
-# 获取有线网络IPv4地址
-get_wired_ipv4() {
-    local wired_ip=''
-    
-    # 检查操作系统类型
-    if [[ "$OSTYPE" == "linux-"* ]]; then
-        # Linux/Android
-        if command -v ifconfig &> /dev/null; then
-            # 有线网接口名称：eth0, eth1, enp0s3, enx开头等
-            wired_ip=$(ifconfig 2>/dev/null | grep -E "^(eth|enp|ens|eno|enx)" -A 5 | grep "inet " | grep -v "127.0.0.1" | awk 'NR==1 {print $2}')
-        fi
-        
-        # 如果还是为空，尝试使用ip命令
-        if [ -z "$wired_ip" ] && command -v ip &> /dev/null; then
-            wired_ip=$(ip -4 addr show 2>/dev/null | grep -E "^(eth|enp|ens|eno|enx)" -A 5 | grep "inet " | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v "^127\." | head -n1)
-        fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS - 获取有线网络接口
-        # 使用 networksetup 获取硬件端口信息
-        if command -v networksetup &> /dev/null; then
-            # 获取有线网卡的设备名称（通常是 "Ethernet" 或 "USB Ethernet"）
-            local ethernet_device=$(networksetup -listallhardwareports 2>/dev/null | grep -A 1 "Ethernet" | grep "Device:" | awk '{print $2}' | head -n1)
-            if [ -n "$ethernet_device" ]; then
-                wired_ip=$(ipconfig getifaddr "$ethernet_device" 2>/dev/null || echo '')
-            fi
-        fi
-        
-        # 如果没有找到，尝试使用常见接口名称
-        if [ -z "$wired_ip" ]; then
-            # 尝试 en0, en1, en2 等有线接口
-            for iface in en0 en1 en2 en3; do
-                local ip=$(ipconfig getifaddr "$iface" 2>/dev/null)
-                if [ -n "$ip" ]; then
-                    wired_ip="$ip"
-                    break
-                fi
-            done
-        fi
-    elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
-        # Windows (Git Bash, MSYS, Cygwin)
-        # 查找以太网适配器（有线网络）
-        # 先尝试英文系统
-        wired_ip=$(ipconfig | grep -A 10 "Ethernet adapter" | grep "IPv4 Address" | awk '{print $NF}' | head -n1)
-        
-        # 如果没找到，尝试中文系统
-        if [ -z "$wired_ip" ]; then
-            wired_ip=$(ipconfig | grep -A 10 "以太网适配器" | grep "IPv4 地址" | awk '{print $NF}' | head -n1)
-        fi
-        
-        # 排除虚拟网卡（VMware、Hyper-V、VirtualBox等）
-        if [ -n "$wired_ip" ]; then
-            local adapter_info=$(ipconfig | grep -B 20 "IPv4 Address" | grep -E "^(Ethernet adapter|以太网适配器)" | grep -vEi "(VMware|VirtualBox|Hyper-V|vEthernet|Virtual)" | head -n1)
-            if [ -z "$adapter_info" ]; then
-                wired_ip=""
-            fi
-        fi
-    fi
-    
-    # 返回结果（空或IP地址）
-    echo "$wired_ip"
-}
-
-# 获取无线网络IPv4地址
-get_wireless_ipv4() {
-    local wireless_ip=''
-    
-    # 检查操作系统类型
-    if [[ "$OSTYPE" == "linux-"* ]]; then
-        # Linux/Android
-        if command -v ifconfig &> /dev/null; then
-            # 无线网接口名称：wlan0, wlan1, wlp开头等
-            wireless_ip=$(ifconfig 2>/dev/null | grep -E "^(wlan|wlp|wlan)" -A 5 | grep "inet " | grep -v "127.0.0.1" | awk 'NR==1 {print $2}')
-        fi
-        
-        # 如果还是为空，尝试使用ip命令
-        if [ -z "$wireless_ip" ] && command -v ip &> /dev/null; then
-            wireless_ip=$(ip -4 addr show 2>/dev/null | grep -E "^(wlan|wlp)" -A 5 | grep "inet " | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v "^127\." | head -n1)
-        fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS - 获取无线网络接口
-        # 使用 networksetup 获取硬件端口信息
-        if command -v networksetup &> /dev/null; then
-            # 获取无线网卡的设备名称（通常是 "Wi-Fi"）
-            local wifi_device=$(networksetup -listallhardwareports 2>/dev/null | grep -A 1 "Wi-Fi" | grep "Device:" | awk '{print $2}' | head -n1)
-            if [ -n "$wifi_device" ]; then
-                wireless_ip=$(ipconfig getifaddr "$wifi_device" 2>/dev/null || echo '')
-            fi
-        fi
-        
-        # 如果没有找到，尝试使用常见接口名称
-        if [ -z "$wireless_ip" ]; then
-            # 尝试 en0, en1, en2 等无线接口
-            for iface in en0 en1 en2 en3; do
-                local ip=$(ipconfig getifaddr "$iface" 2>/dev/null)
-                if [ -n "$ip" ]; then
-                    wireless_ip="$ip"
-                    break
-                fi
-            done
-        fi
-    elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
-        # Windows (Git Bash, MSYS, Cygwin)
-        # 查找无线网络适配器
-        # 先尝试英文系统 - WLAN
-        wireless_ip=$(ipconfig | grep -A 10 "Wireless LAN adapter WLAN" | grep "IPv4 Address" | awk '{print $NF}' | head -n1)
-        
-        # 如果没找到，尝试中文系统 - 无线网络适配器
-        if [ -z "$wireless_ip" ]; then
-            wireless_ip=$(ipconfig | grep -A 10 "无线网络适配器" | grep "IPv4 地址" | awk '{print $NF}' | head -n1)
-        fi
-        
-        # 如果还没找到，尝试其他Wi-Fi适配器名称
-        if [ -z "$wireless_ip" ]; then
-            wireless_ip=$(ipconfig | grep -A 10 "Wi-Fi" | grep "IPv4 Address" | awk '{print $NF}' | head -n1)
-        fi
-    fi
-    
-    # 返回结果（空或IP地址）
-    echo "$wireless_ip"
-}
-
 # 获取本机IPv4地址
 get_ipv4_address() {
     local ipv4_address='localhost'
@@ -159,7 +38,7 @@ get_ipv4_address() {
                                ipconfig | grep -A 20 "$adapter" | grep "IPv4 Address" | awk '{print $NF}' | head -n1
                            done)
         fi
-    elif [[ "$OSTYPE" == "linux-"* ]]; then
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
         # Linux
         if command -v ip &> /dev/null; then
             local interfaces=$(ip -4 addr show 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
@@ -186,10 +65,8 @@ get_ipv4_address() {
     echo "$ipv4_address"
 }
 
-# 获取IPv4地址（分别获取有线和无线）
+# 获取IPv4地址
 LOCAL_IP=$(get_ipv4_address)
-WIRED_IP=$(get_wired_ipv4)
-WIRELESS_IP=$(get_wireless_ipv4)
 
 echo "=========================================="
 echo "   聊天应用服务器启动选择器"
@@ -253,56 +130,12 @@ case $choice in
 
         echo "访问地址: http://localhost:8084"
         echo "网关访问: http://0.0.0.0:8084"
-        
-        # 显示有线IP访问地址（如果有）
-        if [ -n "$WIRED_IP" ]; then
-            echo "有线IP访问: http://${WIRED_IP}:8084"
-        fi
-        
-        # 显示无线IP访问地址（如果有）
-        if [ -n "$WIRELESS_IP" ]; then
-            echo "无线IP访问: http://${WIRELESS_IP}:8084"
-        fi
-        
-        # 如果没有获取到有线或无线IP，显示通用局域网访问
-        if [ -z "$WIRED_IP" ] && [ -z "$WIRELESS_IP" ] && [ -n "$LOCAL_IP" ] && [ "$LOCAL_IP" != "localhost" ]; then
-            echo "局域网访问: http://${LOCAL_IP}:8084"
-        fi
+        echo "局域网访问: http://${LOCAL_IP}:8084"
         echo ""
         echo "注意：HTTP访问时视频语音功能可能受限"
         echo "建议使用HTTPS版本或直接打开HTML文件"
         echo ""
-
-        # 后台启动服务器并记录日志
-        nohup node server.js > server.log 2>&1 &
-        HTTP_PID=$!
-
-        # 等待服务器启动
-        sleep 2
-
-        echo "=========================================="
-        echo "HTTP服务器启动成功！"
-        echo "=========================================="
-        echo ""
-        echo "服务器信息："
-        echo "  进程ID: $HTTP_PID"
-        echo "  日志文件: $(pwd)/server.log"
-        echo ""
-        echo "服务器输出："
-        echo "----------------------------------------"
-        cat server.log
-        echo "----------------------------------------"
-        echo ""
-        echo "提示："
-        echo "  • 查看日志: tail -f server.log"
-        echo "  • 停止服务器: kill $HTTP_PID"
-        echo ""
-
-        printf "服务器已后台启动，按任意键继续..."
-        read -n1 -s -r
-        echo ""
-        echo "继续执行脚本！"
-        echo ""
+        node server.js
         ;;
     2)
         echo ""
@@ -376,25 +209,6 @@ case $choice in
         echo "  • 浏览器会提示证书不安全，请点击'高级'然后'继续访问'"
         echo "  • 查看日志: tail -f https-server.log"
         echo "  • 停止服务器: kill $SERVER_PID"
-        echo ""
-        echo "访问地址："
-        echo "  本地访问: https://localhost:8443"
-        echo "  网关访问: https://0.0.0.0:8443"
-        
-        # 显示有线IP访问地址（如果有）
-        if [ -n "$WIRED_IP" ]; then
-            echo "  有线IP访问: https://${WIRED_IP}:8443"
-        fi
-        
-        # 显示无线IP访问地址（如果有）
-        if [ -n "$WIRELESS_IP" ]; then
-            echo "  无线IP访问: https://${WIRELESS_IP}:8443"
-        fi
-        
-        # 如果没有获取到有线或无线IP，显示通用局域网访问
-        if [ -z "$WIRED_IP" ] && [ -z "$WIRELESS_IP" ] && [ -n "$LOCAL_IP" ] && [ "$LOCAL_IP" != "localhost" ]; then
-            echo "  局域网访问: https://${LOCAL_IP}:8443"
-        fi
         echo ""
         echo "视频语音功能完全可用"
         echo ""
@@ -489,72 +303,29 @@ case $choice in
         echo "HTTP服务器:"
         echo "  访问地址: http://localhost:8084"
         echo "  网关访问: http://0.0.0.0:8084"
-        
-        # 显示有线IP访问地址（如果有）
-        if [ -n "$WIRED_IP" ]; then
-            echo "  有线IP访问: http://${WIRED_IP}:8084"
-        fi
-        
-        # 显示无线IP访问地址（如果有）
-        if [ -n "$WIRELESS_IP" ]; then
-            echo "  无线IP访问: http://${WIRELESS_IP}:8084"
-        fi
-        
-        # 如果没有获取到有线或无线IP，显示通用局域网访问
-        if [ -z "$WIRED_IP" ] && [ -z "$WIRELESS_IP" ] && [ -n "$LOCAL_IP" ] && [ "$LOCAL_IP" != "localhost" ]; then
-            echo "  局域网访问: http://${LOCAL_IP}:8084"
-        fi
-        
+        echo "  局域网访问: http://${LOCAL_IP}:8084"
         echo ""
         echo "HTTPS服务器:"
         echo "  访问地址: https://localhost:8443"
         echo "  网关访问: https://0.0.0.0:8443"
-        
-        # 显示有线IP访问地址（如果有）
-        if [ -n "$WIRED_IP" ]; then
-            echo "  有线IP访问: https://${WIRED_IP}:8443"
-        fi
-        
-        # 显示无线IP访问地址（如果有）
-        if [ -n "$WIRELESS_IP" ]; then
-            echo "  无线IP访问: https://${WIRELESS_IP}:8443"
-        fi
-        
-        # 如果没有获取到有线或无线IP，显示通用局域网访问
-        if [ -z "$WIRED_IP" ] && [ -z "$WIRELESS_IP" ] && [ -n "$LOCAL_IP" ] && [ "$LOCAL_IP" != "localhost" ]; then
-            echo "  局域网访问: https://${LOCAL_IP}:8443"
-        fi
+        echo "  局域网访问: https://${LOCAL_IP}:8443"
         echo ""
         echo "建议使用HTTPS版本以获得完整功能"
         echo ""
-
-        # 后台启动服务器并记录日志
-        nohup node server.js > server.log 2>&1 &
+        node server.js &
         HTTP_PID=$!
-        nohup node server-https.js > https-server.log 2>&1 &
+        node server-https.js &
         HTTPS_PID=$!
 
-        # 等待服务器启动
-        sleep 2
-
-        echo ""
-        echo "=========================================="
-        echo "HTTP和HTTPS服务器同时启动成功！"
-        echo "=========================================="
         echo ""
         echo "HTTP服务器进程ID: $HTTP_PID"
         echo "HTTPS服务器进程ID: $HTTPS_PID"
         echo ""
-        echo "日志文件："
-        echo "  HTTP: $(pwd)/server.log"
-        echo "  HTTPS: $(pwd)/https-server.log"
-        echo ""
+        echo "按 Ctrl+C 停止所有服务器"
 
-        printf "服务器已后台启动，按任意键继续..."
-        read -n1 -s -r
-        echo ""
-        echo "继续执行脚本！"
-        echo ""
+        # 等待用户中断
+        trap 'echo "正在停止服务器..."; kill $HTTP_PID 2>/dev/null; sleep 0.5; kill $HTTPS_PID 2>/dev/null; exit' INT
+        wait
         ;;
     4)
         echo ""
@@ -811,25 +582,6 @@ case $choice in
         echo "  • 浏览器会提示证书不安全，请点击'高级'然后'继续访问'"
         echo "  • 查看日志: tail -f https-server.log"
         echo "  • 停止服务器: kill $SERVER_PID"
-        echo ""
-        echo "访问地址："
-        echo "  本地访问: https://localhost:8443"
-        echo "  网关访问: https://0.0.0.0:8443"
-        
-        # 显示有线IP访问地址（如果有）
-        if [ -n "$WIRED_IP" ]; then
-            echo "  有线IP访问: https://${WIRED_IP}:8443"
-        fi
-        
-        # 显示无线IP访问地址（如果有）
-        if [ -n "$WIRELESS_IP" ]; then
-            echo "  无线IP访问: https://${WIRELESS_IP}:8443"
-        fi
-        
-        # 如果没有获取到有线或无线IP，显示通用局域网访问
-        if [ -z "$WIRED_IP" ] && [ -z "$WIRELESS_IP" ] && [ -n "$LOCAL_IP" ] && [ "$LOCAL_IP" != "localhost" ]; then
-            echo "  局域网访问: https://${LOCAL_IP}:8443"
-        fi
         echo ""
         echo "视频语音功能完全可用"
         echo ""

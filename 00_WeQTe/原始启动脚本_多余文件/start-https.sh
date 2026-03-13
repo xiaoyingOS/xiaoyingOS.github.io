@@ -110,128 +110,7 @@ if [ -n "$PID" ]; then
     echo -e "${GREEN}旧服务器已停止${NC}"
 fi
 
-# 获取有线网络IPv4地址
-get_wired_ipv4() {
-    local wired_ip=''
-    
-    # 检查操作系统类型
-    if [[ "$OSTYPE" == "linux-"* ]]; then
-        # Linux/Android
-        if command -v ifconfig &> /dev/null; then
-            # 有线网接口名称：eth0, eth1, enp0s3, enx开头等
-            wired_ip=$(ifconfig 2>/dev/null | grep -E "^(eth|enp|ens|eno|enx)" -A 5 | grep "inet " | grep -v "127.0.0.1" | awk 'NR==1 {print $2}')
-        fi
-        
-        # 如果还是为空，尝试使用ip命令
-        if [ -z "$wired_ip" ] && command -v ip &> /dev/null; then
-            wired_ip=$(ip -4 addr show 2>/dev/null | grep -E "^(eth|enp|ens|eno|enx)" -A 5 | grep "inet " | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v "^127\." | head -n1)
-        fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS - 获取有线网络接口
-        # 使用 networksetup 获取硬件端口信息
-        if command -v networksetup &> /dev/null; then
-            # 获取有线网卡的设备名称（通常是 "Ethernet" 或 "USB Ethernet"）
-            local ethernet_device=$(networksetup -listallhardwareports 2>/dev/null | grep -A 1 "Ethernet" | grep "Device:" | awk '{print $2}' | head -n1)
-            if [ -n "$ethernet_device" ]; then
-                wired_ip=$(ipconfig getifaddr "$ethernet_device" 2>/dev/null || echo '')
-            fi
-        fi
-        
-        # 如果没有找到，尝试使用常见接口名称
-        if [ -z "$wired_ip" ]; then
-            # 尝试 en0, en1, en2 等有线接口
-            for iface in en0 en1 en2 en3; do
-                local ip=$(ipconfig getifaddr "$iface" 2>/dev/null)
-                if [ -n "$ip" ]; then
-                    wired_ip="$ip"
-                    break
-                fi
-            done
-        fi
-    elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
-        # Windows (Git Bash, MSYS, Cygwin)
-        # 查找以太网适配器（有线网络）
-        # 先尝试英文系统
-        wired_ip=$(ipconfig | grep -A 10 "Ethernet adapter" | grep "IPv4 Address" | awk '{print $NF}' | head -n1)
-        
-        # 如果没找到，尝试中文系统
-        if [ -z "$wired_ip" ]; then
-            wired_ip=$(ipconfig | grep -A 10 "以太网适配器" | grep "IPv4 地址" | awk '{print $NF}' | head -n1)
-        fi
-        
-        # 排除虚拟网卡（VMware、Hyper-V、VirtualBox等）
-        if [ -n "$wired_ip" ]; then
-            local adapter_info=$(ipconfig | grep -B 20 "IPv4 Address" | grep -E "^(Ethernet adapter|以太网适配器)" | grep -vEi "(VMware|VirtualBox|Hyper-V|vEthernet|Virtual)" | head -n1)
-            if [ -z "$adapter_info" ]; then
-                wired_ip=""
-            fi
-        fi
-    fi
-    
-    # 返回结果（空或IP地址）
-    echo "$wired_ip"
-}
-
-# 获取无线网络IPv4地址
-get_wireless_ipv4() {
-    local wireless_ip=''
-    
-    # 检查操作系统类型
-    if [[ "$OSTYPE" == "linux-"* ]]; then
-        # Linux/Android
-        if command -v ifconfig &> /dev/null; then
-            # 无线网接口名称：wlan0, wlan1, wlp开头等
-            wireless_ip=$(ifconfig 2>/dev/null | grep -E "^(wlan|wlp|wlan)" -A 5 | grep "inet " | grep -v "127.0.0.1" | awk 'NR==1 {print $2}')
-        fi
-        
-        # 如果还是为空，尝试使用ip命令
-        if [ -z "$wireless_ip" ] && command -v ip &> /dev/null; then
-            wireless_ip=$(ip -4 addr show 2>/dev/null | grep -E "^(wlan|wlp)" -A 5 | grep "inet " | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v "^127\." | head -n1)
-        fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS - 获取无线网络接口
-        # 使用 networksetup 获取硬件端口信息
-        if command -v networksetup &> /dev/null; then
-            # 获取无线网卡的设备名称（通常是 "Wi-Fi"）
-            local wifi_device=$(networksetup -listallhardwareports 2>/dev/null | grep -A 1 "Wi-Fi" | grep "Device:" | awk '{print $2}' | head -n1)
-            if [ -n "$wifi_device" ]; then
-                wireless_ip=$(ipconfig getifaddr "$wifi_device" 2>/dev/null || echo '')
-            fi
-        fi
-        
-        # 如果没有找到，尝试使用常见接口名称
-        if [ -z "$wireless_ip" ]; then
-            # 尝试 en0, en1, en2 等无线接口
-            for iface in en0 en1 en2 en3; do
-                local ip=$(ipconfig getifaddr "$iface" 2>/dev/null)
-                if [ -n "$ip" ]; then
-                    wireless_ip="$ip"
-                    break
-                fi
-            done
-        fi
-    elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
-        # Windows (Git Bash, MSYS, Cygwin)
-        # 查找无线网络适配器
-        # 先尝试英文系统 - WLAN
-        wireless_ip=$(ipconfig | grep -A 10 "Wireless LAN adapter WLAN" | grep "IPv4 Address" | awk '{print $NF}' | head -n1)
-        
-        # 如果没找到，尝试中文系统 - 无线网络适配器
-        if [ -z "$wireless_ip" ]; then
-            wireless_ip=$(ipconfig | grep -A 10 "无线网络适配器" | grep "IPv4 地址" | awk '{print $NF}' | head -n1)
-        fi
-        
-        # 如果还没找到，尝试其他Wi-Fi适配器名称
-        if [ -z "$wireless_ip" ]; then
-            wireless_ip=$(ipconfig | grep -A 10 "Wi-Fi" | grep "IPv4 Address" | awk '{print $NF}' | head -n1)
-        fi
-    fi
-    
-    # 返回结果（空或IP地址）
-    echo "$wireless_ip"
-}
-
-# 获取本机IPv4地址（通用函数，返回任意可用的IP）
+# 获取本机IPv4地址
 get_ipv4_address() {
     local ipv4_address='localhost'
     
@@ -269,7 +148,7 @@ get_ipv4_address() {
                                ipconfig | grep -A 20 "$adapter" | grep "IPv4 Address" | awk '{print $NF}' | head -n1
                            done)
         fi
-    elif [[ "$OSTYPE" == "linux-"* ]]; then
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
         # Linux
         if command -v ip &> /dev/null; then
             local interfaces=$(ip -4 addr show 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
@@ -310,10 +189,8 @@ SERVER_PID=$!
 # 等待服务器启动
 sleep 2
 
-# 获取IPv4地址（分别获取有线和无线）
+# 获取IPv4地址
 LOCAL_IP=$(get_ipv4_address)
-WIRED_IP=$(get_wired_ipv4)
-WIRELESS_IP=$(get_wireless_ipv4)
 
 # 检查服务器是否成功启动
 if ps -p $SERVER_PID > /dev/null 2>&1; then
@@ -328,21 +205,7 @@ if ps -p $SERVER_PID > /dev/null 2>&1; then
     echo -e "${BLUE}访问地址：${NC}"
     echo -e "  本地访问: ${GREEN}https://localhost:8443${NC}"
     echo -e "  网关访问: ${GREEN}https://0.0.0.0:8443${NC}"
-    
-    # 显示有线IP访问地址（如果有）
-    if [ -n "$WIRED_IP" ]; then
-        echo -e "  有线IP访问: ${GREEN}https://${WIRED_IP}:8443${NC}"
-    fi
-    
-    # 显示无线IP访问地址（如果有）
-    if [ -n "$WIRELESS_IP" ]; then
-        echo -e "  无线IP访问: ${GREEN}https://${WIRELESS_IP}:8443${NC}"
-    fi
-    
-    # 如果没有获取到有线或无线IP，显示通用局域网访问
-    if [ -z "$WIRED_IP" ] && [ -z "$WIRELESS_IP" ] && [ -n "$LOCAL_IP" ] && [ "$LOCAL_IP" != "localhost" ]; then
-        echo -e "  局域网访问: ${GREEN}https://${LOCAL_IP}:8443${NC}"
-    fi
+    echo -e "  局域网访问: ${GREEN}https://${LOCAL_IP}:8443${NC}"
     echo ""
     echo -e "${BLUE}服务器输出：${NC}"
     echo -e "${GREEN}----------------------------------------${NC}"

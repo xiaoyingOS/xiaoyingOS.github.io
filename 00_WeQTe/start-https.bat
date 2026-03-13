@@ -75,12 +75,23 @@ start /min "HTTPS Server" cmd /c "node server-https.js > https-server.log 2>&1"
 :: Wait for server to start
 timeout /t 2 /nobreak >nul
 
+:: Get local IPv4 address
+for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /R /C:"IPv4"') do (
+    for /f "tokens=* delims= " %%b in ("%%a") do (
+        set "LOCAL_IP=%%b"
+    )
+)
+
 echo ========================================
 echo [Success] HTTPS server started successfully!
 echo ========================================
 echo.
 echo Server Info:
 echo   Log file: %SCRIPT_DIR%https-server.log
+echo.
+echo Access URLs:
+echo   Local:    https://localhost:8443
+echo   Network:  https://%LOCAL_IP%:8443
 echo.
 echo Server Output:
 echo ----------------------------------------
