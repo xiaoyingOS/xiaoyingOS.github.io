@@ -2139,219 +2139,18 @@
         }
     </style>
 
-    <!-- Markdown 解析库 - 先尝试CDN，3秒超时则使用本地 -->
-    <script>
-        (function() {
-            var script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js';
-            var timeout = setTimeout(function() {
-                console.log('marked CDN加载超时，使用本地文件');
-                var localScript = document.createElement('script');
-                localScript.src = './AiOS_CDN/marked.min.js';
-                localScript.onload = function() {
-                    clearTimeout(timeout);
-                };
-                document.head.appendChild(localScript);
-            }, 3000);
-            script.onload = function() {
-                clearTimeout(timeout);
-            };
-            script.onerror = function() {
-                console.log('marked CDN加载失败，使用本地文件');
-                var localScript = document.createElement('script');
-                localScript.src = './AiOS_CDN/marked.min.js';
-                localScript.onload = function() {
-                    clearTimeout(timeout);
-                };
-                document.head.appendChild(localScript);
-            };
-            document.head.appendChild(script);
-        })();
-    </script>
+    <!-- Markdown 解析库 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
     
-    <!-- 代码高亮库 - 先尝试CDN，3秒超时则使用本地 -->
-    <script>
-        (function() {
-            // Dark theme CSS
-            var linkDark = document.createElement('link');
-            linkDark.rel = 'stylesheet';
-            linkDark.id = 'hljs-dark-theme';
-            linkDark.href = 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css';
-            var timeoutDark = setTimeout(function() {
-                console.log('highlight.js dark theme CDN加载超时，使用本地文件');
-                var localLinkDark = document.createElement('link');
-                localLinkDark.rel = 'stylesheet';
-                localLinkDark.id = 'hljs-dark-theme-local';
-                localLinkDark.href = './AiOS_CDN/atom-one-dark.min.css';
-                localLinkDark.onload = function() {
-                    clearTimeout(timeoutDark);
-                };
-                document.head.appendChild(localLinkDark);
-            }, 3000);
-            linkDark.onload = function() {
-                clearTimeout(timeoutDark);
-            };
-            linkDark.onerror = function() {
-                console.log('highlight.js dark theme CDN加载失败，使用本地文件');
-                var localLinkDark = document.createElement('link');
-                localLinkDark.rel = 'stylesheet';
-                localLinkDark.id = 'hljs-dark-theme-local';
-                localLinkDark.href = './AiOS_CDN/atom-one-dark.min.css';
-                localLinkDark.onload = function() {
-                    clearTimeout(timeoutDark);
-                };
-                document.head.appendChild(localLinkDark);
-            };
-            document.head.appendChild(linkDark);
-
-            // Light theme CSS
-            var linkLight = document.createElement('link');
-            linkLight.rel = 'stylesheet';
-            linkLight.id = 'hljs-light-theme';
-            linkLight.disabled = true;
-            linkLight.href = 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-light.min.css';
-            var timeoutLight = setTimeout(function() {
-                console.log('highlight.js light theme CDN加载超时，使用本地文件');
-                var localLinkLight = document.createElement('link');
-                localLinkLight.rel = 'stylesheet';
-                localLinkLight.id = 'hljs-light-theme-local';
-                localLinkLight.disabled = true;
-                localLinkLight.href = './AiOS_CDN/atom-one-light.min.css';
-                localLinkLight.onload = function() {
-                    clearTimeout(timeoutLight);
-                };
-                document.head.appendChild(localLinkLight);
-            }, 3000);
-            linkLight.onload = function() {
-                clearTimeout(timeoutLight);
-            };
-            linkLight.onerror = function() {
-                console.log('highlight.js light theme CDN加载失败，使用本地文件');
-                var localLinkLight = document.createElement('link');
-                localLinkLight.rel = 'stylesheet';
-                localLinkLight.id = 'hljs-light-theme-local';
-                localLinkLight.disabled = true;
-                localLinkLight.href = './AiOS_CDN/atom-one-light.min.css';
-                localLinkLight.onload = function() {
-                    clearTimeout(timeoutLight);
-                };
-                document.head.appendChild(localLinkLight);
-            };
-            document.head.appendChild(linkLight);
-
-            // Highlight.js JS
-            var script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js';
-            var timeout = setTimeout(function() {
-                console.log('highlight.js CDN加载超时，使用本地文件');
-                var localScript = document.createElement('script');
-                localScript.src = './AiOS_CDN/highlight.min.js';
-                localScript.onload = function() {
-                    clearTimeout(timeout);
-                };
-                document.head.appendChild(localScript);
-            }, 3000);
-            script.onload = function() {
-                clearTimeout(timeout);
-            };
-            script.onerror = function() {
-                console.log('highlight.js CDN加载失败，使用本地文件');
-                var localScript = document.createElement('script');
-                localScript.src = './AiOS_CDN/highlight.min.js';
-                localScript.onload = function() {
-                    clearTimeout(timeout);
-                };
-                document.head.appendChild(localScript);
-            };
-            document.head.appendChild(script);
-        })();
-    </script>
+    <!-- 代码高亮库 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css" id="hljs-dark-theme">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-light.min.css" id="hljs-light-theme" disabled>
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
     
-    <!-- 数学公式库 KaTeX - 先尝试CDN，3秒超时则使用本地 -->
-    <script>
-        (function() {
-            // KaTeX CSS
-            var link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css';
-            var timeoutCss = setTimeout(function() {
-                console.log('KaTeX CSS CDN加载超时，使用本地文件');
-                var localLink = document.createElement('link');
-                localLink.rel = 'stylesheet';
-                localLink.href = './AiOS_CDN/katex.min.css';
-                localLink.onload = function() {
-                    clearTimeout(timeoutCss);
-                };
-                document.head.appendChild(localLink);
-            }, 3000);
-            link.onload = function() {
-                clearTimeout(timeoutCss);
-            };
-            link.onerror = function() {
-                console.log('KaTeX CSS CDN加载失败，使用本地文件');
-                var localLink = document.createElement('link');
-                localLink.rel = 'stylesheet';
-                localLink.href = './AiOS_CDN/katex.min.css';
-                localLink.onload = function() {
-                    clearTimeout(timeoutCss);
-                };
-                document.head.appendChild(localLink);
-            };
-            document.head.appendChild(link);
-
-            // KaTeX JS
-            var script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js';
-            var timeout = setTimeout(function() {
-                console.log('KaTeX CDN加载超时，使用本地文件');
-                var localScript = document.createElement('script');
-                localScript.src = './AiOS_CDN/katex.min.js';
-                localScript.onload = function() {
-                    clearTimeout(timeout);
-                };
-                document.head.appendChild(localScript);
-            }, 3000);
-            script.onload = function() {
-                clearTimeout(timeout);
-            };
-            script.onerror = function() {
-                console.log('KaTeX CDN加载失败，使用本地文件');
-                var localScript = document.createElement('script');
-                localScript.src = './AiOS_CDN/katex.min.js';
-                localScript.onload = function() {
-                    clearTimeout(timeout);
-                };
-                document.head.appendChild(localScript);
-            };
-            document.head.appendChild(script);
-
-            // KaTeX auto-render
-            var scriptRender = document.createElement('script');
-            scriptRender.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js';
-            var timeoutRender = setTimeout(function() {
-                console.log('KaTeX auto-render CDN加载超时，使用本地文件');
-                var localScriptRender = document.createElement('script');
-                localScriptRender.src = './AiOS_CDN/auto-render.min.js';
-                localScriptRender.onload = function() {
-                    clearTimeout(timeoutRender);
-                };
-                document.head.appendChild(localScriptRender);
-            }, 3000);
-            scriptRender.onload = function() {
-                clearTimeout(timeoutRender);
-            };
-            scriptRender.onerror = function() {
-                console.log('KaTeX auto-render CDN加载失败，使用本地文件');
-                var localScriptRender = document.createElement('script');
-                localScriptRender.src = './AiOS_CDN/auto-render.min.js';
-                localScriptRender.onload = function() {
-                    clearTimeout(timeoutRender);
-                };
-                document.head.appendChild(localScriptRender);
-            };
-            document.head.appendChild(scriptRender);
-        })();
-    </script>
+    <!-- 数学公式库 KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
     <!-- Markdown 样式 -->
     <style>
@@ -2771,53 +2570,36 @@
     </div>
 
     <script>
-        // 等待 marked 和 highlight.js 加载完成后再配置
-        function initMarkdownAndHighlight() {
-            if (typeof marked === 'undefined' || typeof hljs === 'undefined') {
-                // 如果库还没加载完成，等待 100ms 后重试
-                setTimeout(initMarkdownAndHighlight, 100);
-                return;
-            }
+        // 配置 marked 和 highlight.js
+        const renderer = new marked.Renderer();
+        renderer.code = function(code, language) {
+            let lang = language || '';
+            let highlightedCode;
 
-            // 配置 marked 和 highlight.js
-            const renderer = new marked.Renderer();
-            renderer.code = function(code, language) {
-                let lang = language || '';
-                let highlightedCode;
-
-                if (lang && hljs.getLanguage(lang)) {
-                    try {
-                        highlightedCode = hljs.highlight(code, { language: lang }).value;
-                    } catch (err) {
-                        console.error('代码高亮错误:', err);
-                        highlightedCode = hljs.highlightAuto(code).value;
-                        lang = '';
-                    }
-                } else {
+            if (lang && hljs.getLanguage(lang)) {
+                try {
+                    highlightedCode = hljs.highlight(code, { language: lang }).value;
+                } catch (err) {
+                    console.error('代码高亮错误:', err);
                     highlightedCode = hljs.highlightAuto(code).value;
                     lang = '';
                 }
+            } else {
+                highlightedCode = hljs.highlightAuto(code).value;
+                lang = '';
+            }
 
-                return `<pre><code class="hljs language-${lang}">${highlightedCode}</code></pre>`;
-            };
+            return `<pre><code class="hljs language-${lang}">${highlightedCode}</code></pre>`;
+        };
 
-            marked.setOptions({
-                renderer: renderer,
-                breaks: true,
-                gfm: true
-            });
-        }
-
-        // 启动初始化
-        initMarkdownAndHighlight();
+        marked.setOptions({
+            renderer: renderer,
+            breaks: true,
+            gfm: true
+        });
 
         // Markdown 渲染工具函数
 function renderMarkdown(content) {
-    // 确保库已加载
-    if (typeof marked === 'undefined') {
-        console.warn('marked 库尚未加载完成，等待加载...');
-        return content; // 返回原始内容
-    }
             // 保护数学公式，防止被 marked.js 错误解析
             const mathPlaceholders = [];
 
@@ -2912,11 +2694,6 @@ function renderMarkdown(content) {
 
         // 渲染数学公式
         function renderMath(element) {
-            // 确保 KaTeX auto-render 已加载
-            if (typeof renderMathInElement === 'undefined') {
-                console.warn('KaTeX auto-render 库尚未加载完成，跳过数学公式渲染');
-                return;
-            }
             renderMathInElement(element, {
                 delimiters: [
                     {left: '$$', right: '$$', display: true},
@@ -6223,16 +6000,8 @@ function renderMarkdown(content) {
 
         // 启动应用
         document.addEventListener('DOMContentLoaded', async () => {
-            // 等待 highlight.js 加载完成
-            function waitForHighlightJS() {
-                if (typeof hljs === 'undefined') {
-                    setTimeout(waitForHighlightJS, 100);
-                    return;
-                }
-                // 初始化 highlight.js
-                hljs.highlightAll();
-            }
-            waitForHighlightJS();
+            // 初始化 highlight.js
+            hljs.highlightAll();
             await App.init();
         });
     </script>
