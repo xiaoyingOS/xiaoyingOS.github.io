@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/data/data/com.termux/files/home/Server/web/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

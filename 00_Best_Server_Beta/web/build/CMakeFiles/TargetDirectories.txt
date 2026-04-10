@@ -1,0 +1,5 @@
+/data/data/com.termux/files/home/Server/web/build/CMakeFiles/web_server.dir
+/data/data/com.termux/files/home/Server/web/build/CMakeFiles/web_server_daemon.dir
+/data/data/com.termux/files/home/Server/web/build/CMakeFiles/https_proxy.dir
+/data/data/com.termux/files/home/Server/web/build/CMakeFiles/edit_cache.dir
+/data/data/com.termux/files/home/Server/web/build/CMakeFiles/rebuild_cache.dir

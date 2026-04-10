@@ -1,0 +1,1 @@
+/data/data/com.termux/files/usr/bin/c++  -Wall -Wextra -O3 -O2 -g -DNDEBUG -Xlinker --dependency-file=CMakeFiles/https_proxy.dir/link.d CMakeFiles/https_proxy.dir/https_proxy.cpp.o -o https_proxy  /data/data/com.termux/files/usr/lib/libssl.so /data/data/com.termux/files/usr/lib/libcrypto.so -lpthread

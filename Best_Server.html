@@ -1,0 +1,3698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <title>Best_Server - 高性能 HTTP/2 服务器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            margin: 0 auto 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: fadeInDown 1s ease-out;
+            width: 100%;
+            box-sizing: border-box;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            background: linear-gradient(135deg, #ffd700 0%, #ffffff 50%, #90ee90 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0 auto 15px auto;
+            font-weight: 800;
+            letter-spacing: -2px;
+            filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.5));
+            display: block;
+            text-align: center;
+        }
+        
+        .header p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2em;
+            font-weight: 300;
+        }
+        
+        .header .http2-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 700;
+            margin-top: 20px;
+            font-size: 1em;
+            box-shadow: 0 10px 30px rgba(0, 210, 255, 0.3);
+            animation: pulse 2s infinite;
+        }
+        
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.5em;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+        }
+        
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: rotate(180deg) scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .theme-icon {
+            transition: all 0.3s ease;
+        }
+        
+        /* 深色主题样式 */
+        body.dark-theme {
+            background: #000000;
+        }
+        
+        body.dark-theme .header {
+            background: linear-gradient(135deg, #1e5631 0%, #3a6b3a 100%);
+        }
+        
+        body.dark-theme .container {
+            background: rgba(20, 20, 20, 0.9);
+        }
+        
+        body.dark-theme .card {
+            background: #484848;
+            border-color: #5a5a5a;
+            color: #ffffff;
+        }
+        
+        body.dark-theme .card h2 {
+            color: #ffffff;
+        }
+        
+        body.dark-theme .card h3 {
+            color: #e0e0e0;
+        }
+        
+        body.dark-theme .file-item {
+            background: #5a5a5a;
+            border-color: #6a6a6a;
+            color: #ffffff;
+        }
+        
+        body.dark-theme .file-item:hover {
+            background: #6a6a6a;
+            border-color: #7a7a7a;
+        }
+        
+        body.dark-theme .file-name {
+            color: #ffffff;
+        }
+        
+        body.dark-theme .file-size {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        body.dark-theme input {
+            background: #5a5a5a;
+            border-color: #6a6a6a;
+            color: #ffffff;
+        }
+        
+        body.dark-theme input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        body.dark-theme textarea {
+            background: #5a5a5a;
+            border-color: #6a6a6a;
+            color: #ffffff;
+        }
+        
+        body.dark-theme .log-entry {
+            background: #4a4a4a;
+            border-color: #5a5a5a;
+            color: #ffffff;
+        }
+        
+        body.dark-theme .status-item {
+            background: #3a3a3a;
+            border-color: #4a4a4a;
+        }
+        
+        body.dark-theme .status-item:hover {
+            background: #4a4a4a;
+        }
+        
+        body.dark-theme .status-label {
+            color: #bbbbbb;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+        
+        .card {
+            background: #ffffff;
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: fadeInUp 0.8s ease-out;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        
+        .card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+        
+        .card h2 {
+            font-size: 1.8em;
+            background: linear-gradient(135deg, #00d2ff 0%, #ff00ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            font-weight: 700;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .status-item {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        
+        .status-item:hover {
+            background: #e9ecef;
+            transform: scale(1.05);
+        }
+        
+        .status-label {
+            color: #666;
+            font-weight: 500;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+        
+        .status-value {
+            font-weight: 700;
+            font-size: 1.5em;
+        }
+        
+        .status-value.up {
+            color: #28a745;
+        }
+        
+        .status-value.down {
+            color: #dc3545;
+        }
+        
+        .status-value.neutral {
+            color: #007bff;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            color: #333;
+            font-weight: 600;
+            font-size: 1em;
+        }
+        
+        .form-group input[type="file"],
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 16px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: #ffffff;
+            color: #333;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group input::placeholder {
+            color: #999;
+        }
+        
+        .btn {
+            padding: 16px 28px;
+            border: none;
+            border-radius: 16px;
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-right: 12px;
+            margin-bottom: 12px;
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+            color: white;
+            box-shadow: 0 10px 30px rgba(0, 210, 255, 0.4);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(0, 210, 255, 0.6);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #00ff88 0%, #00d2ff 100%);
+            color: white;
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.4);
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(0, 255, 136, 0.6);
+        }
+        
+        .btn-info {
+            background: linear-gradient(135deg, #ff00ff 0%, #00d2ff 100%);
+            color: white;
+            box-shadow: 0 10px 30px rgba(255, 0, 255, 0.4);
+        }
+        
+        .btn-info:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(255, 0, 255, 0.6);
+        }
+        
+        .file-list {
+            max-height: 350px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 15px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        
+        .file-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .file-list::-webkit-scrollbar-track {
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+        
+        .file-list::-webkit-scrollbar-thumb {
+            background: #adb5bd;
+            border-radius: 4px;
+        }
+        
+        .file-list::-webkit-scrollbar-thumb:hover {
+            background: #6c757d;
+        }
+        
+        .file-item {
+            padding: 15px;
+            background: #ffffff;
+            margin-bottom: 10px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        
+        .file-item:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+            border-color: #667eea;
+        }
+        
+        .file-info {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+        
+        .file-size {
+            font-size: 0.85em;
+            color: #888;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.85em;
+            margin: 0;
+        }
+        
+        .progress-bar {
+            height: 24px;
+            background: #e9ecef;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 15px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #28a745 0%, #007bff 100%);
+            transition: width 0.5s ease;
+            border-radius: 12px;
+        }
+        
+        .logs-container {
+            max-height: 350px;
+            overflow-y: auto;
+            background: #1a1a2e;
+            border-radius: 16px;
+            padding: 20px;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+        
+        .logs-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .logs-container::-webkit-scrollbar-track {
+            background: #0f0f1a;
+            border-radius: 4px;
+        }
+        
+        .logs-container::-webkit-scrollbar-thumb {
+            background: #4a4a6a;
+            border-radius: 4px;
+        }
+        
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .log-entry:hover {
+            background: rgba(255, 255, 255, 0.05);
+            padding-left: 10px;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .log-time {
+            color: #00d2ff;
+            opacity: 0.7;
+            font-size: 0.8em;
+            margin-right: 10px;
+        }
+        
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+        
+        @keyframes glow {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
+            }
+            50% {
+                box-shadow: 0 0 40px rgba(0, 210, 255, 0.8);
+            }
+        }
+        
+        .response-message {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 16px;
+            display: none;
+            animation: fadeIn 0.5s ease;
+            font-weight: 500;
+        }
+        
+        .response-success {
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+        
+        .response-error {
+            background: rgba(255, 71, 87, 0.1);
+            color: #ff4757;
+            border: 1px solid rgba(255, 71, 87, 0.3);
+        }
+        
+        .response-info {
+            background: rgba(0, 210, 255, 0.1);
+            color: #00d2ff;
+            border: 1px solid rgba(0, 210, 255, 0.3);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        /* 文件管理器样式 */
+        .file-manager-toolbar {
+            padding: 15px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .file-manager-toolbar .btn {
+            padding: 10px 18px;
+            font-size: 0.9em;
+        }
+
+        .breadcrumb {
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .breadcrumb-item {
+            color: #666;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .breadcrumb-item:hover {
+            color: #667eea;
+        }
+
+        .breadcrumb-item.active {
+            color: #333;
+            font-weight: 600;
+            cursor: default;
+        }
+
+        .file-manager-list {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 10px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .file-manager-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .file-manager-list::-webkit-scrollbar-track {
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+
+        .file-manager-list::-webkit-scrollbar-thumb {
+            background: #adb5bd;
+            border-radius: 4px;
+        }
+
+        .file-manager-list::-webkit-scrollbar-thumb:hover {
+            background: #6c757d;
+        }
+
+        .file-manager-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            background: #ffffff;
+            margin-bottom: 8px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .file-manager-item:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+            border-color: #667eea;
+        }
+
+        .file-manager-icon {
+            font-size: 1.5em;
+            margin-right: 12px;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .file-manager-icon.folder {
+            color: #ffc107;
+        }
+
+        .file-manager-icon.file {
+            color: #6c757d;
+        }
+
+        .file-manager-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-manager-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.95em;
+            margin-bottom: 3px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-manager-size {
+            color: #888;
+            font-size: 0.8em;
+        }
+
+        .file-manager-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .file-manager-actions button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-download {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-download:hover {
+            background: #138496;
+        }
+
+        .btn-zip {
+            background: transparent !important;
+            font-size: 23px !important;
+            padding: 0 !important;
+            color: inherit !important;
+            width: auto !important;
+            min-width: auto !important;
+        }
+
+        .btn-zip:hover {
+            background: transparent;
+            transform: scale(1.1);
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+        }
+
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #212529;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1em;
+            margin-bottom: 20px;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .upload-area {
+            padding: 30px;
+            text-align: center;
+            border: 3px dashed #dee2e6;
+            border-radius: 15px;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #e7f1ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #d4edda;
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .upload-text {
+            color: #6c757d;
+            font-size: 1em;
+            margin-bottom: 15px;
+        }
+
+        .upload-progress {
+            margin-top: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .upload-progress-bar {
+            height: 8px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+
+        .upload-progress-text {
+            padding: 10px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #495057;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #dc3545;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+
+        /* 性能监控样式 */
+        .perf-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .perf-item {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .perf-item:hover {
+            background: #e9ecef;
+            transform: scale(1.05);
+        }
+
+        .perf-label {
+            color: #666;
+            font-weight: 500;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .perf-value {
+            font-weight: 700;
+            font-size: 1.5em;
+        }
+
+        .perf-value.excellent {
+            color: #28a745;
+        }
+
+        .perf-value.good {
+            color: #007bff;
+        }
+
+        .perf-value.warning {
+            color: #ffc107;
+        }
+
+        .perf-value.critical {
+            color: #dc3545;
+        }
+
+        .perf-icon {
+            font-size: 1.3em;
+        }
+
+        /* 性能监控深色主题样式 */
+        body.dark-theme .perf-item {
+            background: #5a5a5a;
+            border-color: #6a6a6a;
+        }
+
+        body.dark-theme .perf-item:hover {
+            background: #6a6a6a;
+            border-color: #7a7a7a;
+        }
+
+        body.dark-theme .perf-label {
+            color: #e0e0e0;
+        }
+
+        body.dark-theme .perf-value {
+            color: #ffffff;
+        }
+
+        body.dark-theme .perf-value.excellent {
+            color: #28a745;
+        }
+
+        body.dark-theme .perf-value.good {
+            color: #00d2ff;
+        }
+
+        body.dark-theme .perf-value.warning {
+            color: #ffc107;
+        }
+
+        body.dark-theme .perf-value.critical {
+            color: #ff4757;
+        }
+
+        /* 拖拽覆盖层样式 */
+        .drag-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(102, 126, 234, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .drag-overlay.show {
+            display: flex;
+        }
+
+        .drag-overlay-content {
+            text-align: center;
+            color: white;
+            animation: scaleIn 0.3s ease;
+        }
+
+        .drag-icon {
+            font-size: 6em;
+            margin-bottom: 20px;
+            animation: bounce 1s ease infinite;
+        }
+
+        .drag-text {
+            font-size: 2em;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .drag-hint {
+            font-size: 1.2em;
+            opacity: 0.8;
+        }
+
+        body.drag-over {
+            overflow: hidden;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+    </style>
+</head>
+<body ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)">
+    <!-- 拖拽覆盖层 -->
+    <div id="dragOverlay" class="drag-overlay">
+        <div class="drag-overlay-content">
+            <div class="drag-icon">📁</div>
+            <div class="drag-text">松开即可上传</div>
+            <div class="drag-hint">支持文件和文件夹</div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle" aria-label="切换主题">
+                <span class="theme-icon">☀️</span>
+            </button>
+            <h1>🚀 Best_Server</h1>
+            <p>新一代高性能 HTTP/2 服务器管理平台</p>
+            <div class="http2-badge">✓ HTTP/2 PROTOCOL ACTIVE</div>
+        </div>
+
+        <div>
+            <div style="text-align: center; color: #d32f2f; margin-bottom: 1px; margin-top: -18px;">
+                <strong style="color: #4a00ff;">→→→本地部署 💡 提示←←←</strong>
+            </div>
+            <div style="text-align: left; color: #d32f2f;">
+                >>> <strong>准备阶段：安装 Cmake和Clang或Gcc和Openssl和libarchive: </strong> <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;"> 命令行或官网下载安装：
+                <br>有些老设备安卓需要授权才能复制项目到Termux中 授权存储：termux-setup-storage
+                </code>
+                <button id="copy-btn-1" onclick="handleCopy('copy-btn-1')" class="btn btn-sm btn-ghost" title="复制结果">复制 &nbsp;
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="9" height="13" x="9" y="9" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                </button>
+                <br>
+                >>> <strong style="color: #4a00ff;">手机端Termux安装Cmake和Clang和Openssl和libarchive: <br> </strong> <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">更新所有包：pkg update && pkg upgrade  安装Cmake和Clang和Openssl等：pkg install cmake clang openssl libarchive </code>
+                <button id="copy-btn-2" onclick="handleCopy('copy-btn-2')" class="btn btn-sm btn-ghost" title="复制结果">复制 &nbsp;
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="9" height="13" x="9" y="9" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                </button>
+                <br>
+                >>> <strong style="color: #4a00ff;">启动服务器</strong>: 运行命令 <code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">首先使用命令 cp -r "文件夹路径" . 把项目复制到Termux中 
+                    Termux/Linux：授权命令 chmod +x ./00_一键构建脚本.sh ./00_一键启动脚本.sh </code>
+                <br><code style="background-color: #2D2D2D; color: #A5D6A7; padding: 2px 6px; border-radius: 3px; font-family: Consolas, Monaco;">项目构建和启动：构建命令 ./00_一键构建脚本.sh    启动命令 ./00_一键启动脚本.sh </code>
+                <button id="copy-btn-3" onclick="handleCopy('copy-btn-3')" class="btn btn-sm btn-ghost" title="复制结果">复制 &nbsp;
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="9" height="13" x="9" y="9" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                </button>
+                <br>
+                <br>
+                >>> <strong style="color: #4a00ff;">服务器部署所需文件下载：</strong>点→<button onclick="downloadLocalFile('./00_Best_Server.zip', 'Best_Server.zip')" class="download-btn" title="点击下载">↓</button><br>
+                
+            </div>
+
+            <div style="background-color: #2D2D2D; color: #A5D6A7;">
+                <strong>
+                    &nbsp; 0基础小白 项目部署完整步骤：
+                        <br>
+                    &nbsp; 1. 打开Termux授权后、把项目复制到Termux：
+                        第一次使用Termux 需要授权，也可以直接使用命令弹出授权窗口：termux-setup-storage
+                        <br>
+                        【可选 】创建文件夹存放项目：mkdir Best_Server【创建Best_Server文件夹】 &nbsp;&nbsp;&nbsp; 切换到目录：cd Best_Server
+                        <br>
+                        【可选】把项目复制到Termux中：cp -r "/storage/emulated/0/00_test/"* . 【例子，特别注意有个点(.) .表示当前目录，/storage/emulated/0/00_test/也就是下载解压后的文件夹路径】
+                        <br>
+                    &nbsp; 两个可选一步操作也行：cp -r "/storage/emulated/0/00_test/Server" . 【/storage/emulated/0/00_test/Server换成你的解压后的项目路径 可以在文件管理器中查看】
+                        <br>
+                    &nbsp; 2. 更新所有包到最新，安装必需包：pkg update && pkg upgrade -y && pkg install -y cmake clang openssl libarchive
+                        <br>
+                    &nbsp; 3. 脚本授权运行权限，运行脚本构建和启动服务器：chmod +x ./00_一键构建项目.sh ./00_一键启动脚本.sh && ./00_一键构建项目.sh && ./00_一键启动脚本.sh
+                        <br>
+                    &nbsp; Copyright © 1999 - 2026 xiaobai. All Rights Reserved. 版权归人类所有
+                </strong>
+            </div>
+            <br>
+            <style>
+                .download-btn {
+                    background: var(--accent-color);
+                    color: white;
+                    border: none;
+                    border-radius: 50%;
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: bold;
+                    transition: all 0.3s ease;
+                }
+        
+                .download-btn:hover {
+                    background: transparent;
+                    transform: scale(1.1);
+                }
+                .download-btn {
+                    background: none;
+                    border: none;
+                    font-size: 20px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    color: #666;
+                    padding: 0;
+                    width: 50px;
+                    height: 50px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    position: relative;
+                    margin-left: 8px;
+                    vertical-align: middle;
+                    -webkit-text-stroke: 1.5px #666;
+                    --rotate-before: 0deg;
+                    --rotate-after: 0deg;
+                    --color-1: #FF6B6B;
+                    --color-2: #4ECDC4;
+                    --color-3: #45B7D1;
+                    --color-4: #96CEB4;
+                    --color-5: #FFE66D;
+                    --color-6: #FF6B6B;
+                    --color-7: #4ECDC4;
+                    --color-8: #45B7D1;
+                }
+                
+                .download-btn::before {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    border: 3px solid transparent;
+                    border-top-color: var(--color-1);
+                    border-right-color: var(--color-2);
+                    border-bottom-color: var(--color-3);
+                    border-left-color: var(--color-4);
+                    z-index: 1;
+                    animation: spinBefore 2s linear infinite;
+                    transition: border-color 0.5s ease-in-out;
+                    box-shadow: 0 0 12px rgba(78, 205, 196, 0.5);
+                }
+                
+                .download-btn::after {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 50%;
+                    border: 2px solid transparent;
+                    border-top-color: var(--color-5);
+                    border-right-color: var(--color-6);
+                    border-bottom-color: var(--color-7);
+                    border-left-color: var(--color-8);
+                    z-index: 1;
+                    animation: spinAfter 1.5s linear infinite;
+                    transition: border-color 0.5s ease-in-out;
+                    box-shadow: 0 0 8px rgba(255, 230, 109, 0.5);
+                }
+                
+                @keyframes spinBefore {
+                    0% {
+                        transform: translate(-50%, -50%) rotate(0deg);
+                    }
+                    100% {
+                        transform: translate(-50%, -50%) rotate(360deg);
+                    }
+                }
+                
+                @keyframes spinAfter {
+                    0% {
+                        transform: translate(-50%, -50%) rotate(360deg);
+                    }
+                    100% {
+                        transform: translate(-50%, -50%) rotate(0deg);
+                    }
+                }
+                </style>
+
+                <script>
+                // 下载本地文件函数
+                async function downloadLocalFile(url, filename) {
+                    try {
+                        const response = await fetch(url);
+                        const blob = await response.blob();
+                        const blobUrl = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = blobUrl;
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(blobUrl);
+                    } catch (error) {
+                        console.error('下载失败:', error);
+                        alert('下载失败: ' + error.message);
+                    }
+                }
+                
+                // 生成随机颜色
+                function getRandomColor() {
+                    const colors = [
+                        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+                        '#FFE66D', '#FF9F43', '#EE5A24', '#00D2D3',
+                        '#5F27CD', '#9B59B6', '#3498DB', '#E74C3C'
+                    ];
+                    return colors[Math.floor(Math.random() * colors.length)];
+                }
+                
+                // 更新圆环颜色
+                function updateRingColors() {
+                    const downloadBtn = document.querySelector('.download-btn');
+                    if (!downloadBtn) return;
+                    
+                    // 随机设置8个边框颜色
+                    downloadBtn.style.setProperty('--color-1', getRandomColor());
+                    downloadBtn.style.setProperty('--color-2', getRandomColor());
+                    downloadBtn.style.setProperty('--color-3', getRandomColor());
+                    downloadBtn.style.setProperty('--color-4', getRandomColor());
+                    downloadBtn.style.setProperty('--color-5', getRandomColor());
+                    downloadBtn.style.setProperty('--color-6', getRandomColor());
+                    downloadBtn.style.setProperty('--color-7', getRandomColor());
+                    downloadBtn.style.setProperty('--color-8', getRandomColor());
+                }
+                
+                // 启动随机颜色和旋转动画
+                function startRandomAnimation() {
+                    setInterval(() => {
+                        updateRingColors();
+                    }, 800); // 每800毫秒切换一次颜色
+                }
+                
+                // 启动随机动画
+                startRandomAnimation();
+
+                //实现复制功能
+                // 定义复制内容映射
+                const copyContents = {
+                    'copy-btn-1': 'termux-setup-storage',
+                    'copy-btn-2': 'pkg update && pkg upgrade -y && pkg install -y cmake clang openssl libarchive',
+                    'copy-btn-3': 'chmod +x ./00_一键构建项目.sh ./00_一键启动脚本.sh && ./00_一键构建项目.sh && ./00_一键启动脚本.sh'
+                };
+
+                // 统一复制函数
+                function handleCopy(buttonId) {
+                    const textToCopy = copyContents[buttonId];
+                    if (!textToCopy) return;
+                    
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        const btn = document.getElementById(buttonId);
+                        const originalHTML = btn.innerHTML;
+                        btn.innerHTML = '✓ 已复制';
+                        setTimeout(() => {
+                            btn.innerHTML = originalHTML;
+                        }, 2000);
+                    }).catch(err => {
+                        alert('复制失败');
+                    });
+                }
+                
+            </script>
+        </div>
+
+        <div class="grid">
+            <!-- 文件管理 -->
+            <div class="card">
+                <h2>📁 文件管理</h2>
+                <div class="file-manager-toolbar">
+                    <button class="btn btn-primary" onclick="showUploadModal()">
+                        📤 上传文件
+                    </button>
+                    <button class="btn btn-success" onclick="showCreateFolderModal()">
+                        📁 新建文件夹
+                    </button>
+                    <button class="btn btn-info" onclick="refreshFileList()">
+                        🔄 刷新
+                    </button>
+                </div>
+                <div class="breadcrumb" id="fmBreadcrumb">
+                    <span class="breadcrumb-item active">根目录</span>
+                </div>
+                <div class="file-manager-list" id="fmFileList">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>加载中...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 性能监控 -->
+            <div class="card">
+                <h2>📈 性能监控</h2>
+                <div class="perf-grid">
+                    <div class="perf-item">
+                        <div class="perf-label">
+                            <span class="perf-icon">📤</span>
+                            上传速度
+                        </div>
+                        <div class="perf-value" id="perfUploadSpeed">0 MB/s</div>
+                    </div>
+                    <div class="perf-item">
+                        <div class="perf-label">
+                            <span class="perf-icon">📥</span>
+                            下载速度
+                        </div>
+                        <div class="perf-value" id="perfDownloadSpeed">0 MB/s</div>
+                    </div>
+                    <div class="perf-item">
+                        <div class="perf-label">
+                            <span class="perf-icon">⚡</span>
+                            IOPS
+                        </div>
+                        <div class="perf-value" id="perfDiskIOPS">0</div>
+                    </div>
+                    <div class="perf-item">
+                        <div class="perf-label">
+                            <span class="perf-icon">💽</span>
+                            磁盘使用率
+                        </div>
+                        <div class="perf-value" id="perfDiskUsage">0%</div>
+                    </div>
+                    <div class="perf-item">
+                        <div class="perf-label">
+                            <span class="perf-icon">🌡️</span>
+                            CPU温度
+                        </div>
+                        <div class="perf-value" id="perfCpuTemp">--°C</div>
+                    </div>
+                    <div class="perf-item">
+                        <div class="perf-label">
+                            <span class="perf-icon">🎮</span>
+                            GPU温度
+                        </div>
+                        <div class="perf-value" id="perfGpuTemp">--°C</div>
+                    </div>
+                    <div class="perf-item">
+                        <div class="perf-label">
+                            <span class="perf-icon">📤</span>
+                            服务器进程读速度
+                        </div>
+                        <div class="perf-value" id="perfDiskReadSpeed">0 KB/s</div>
+                    </div>
+                    <div class="perf-item">
+                        <div class="perf-label">
+                            <span class="perf-icon">📥</span>
+                            服务器进程写速度
+                        </div>
+                        <div class="perf-value" id="perfDiskWriteSpeed">0 KB/s</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 服务器状态监控 -->
+            <div class="card">
+                <h2>📊 服务器状态</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">运行状态</div>
+                        <div class="status-value up">在线</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">协议</div>
+                        <div class="status-value neutral">HTTP/2</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">活跃连接</div>
+                        <div class="status-value neutral" id="activeConnections">0</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">总请求数</div>
+                        <div class="status-value neutral" id="totalRequests">0</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">请求/秒</div>
+                        <div class="status-value up" id="requestsPerSecond">0</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">2xx 响应</div>
+                        <div class="status-value up" id="status2xx">0</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">4xx 响应</div>
+                        <div class="status-value down" id="status4xx">0</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">5xx 响应</div>
+                        <div class="status-value down" id="status5xx">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 服务器资源监控 -->
+            <div class="card">
+                <h2>🖥️ 服务器资源</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">CPU 使用率</div>
+                        <div class="status-value neutral" id="serverCpuUsage">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">内存使用</div>
+                        <div class="status-value neutral" id="serverMemoryUsage">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">虚拟内存</div>
+                        <div class="status-value neutral" id="serverVirtualMemory">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">线程数</div>
+                        <div class="status-value neutral" id="serverThreads">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">运行资源数</div>
+                        <div class="status-value neutral" id="serverOpenFiles">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">进程状态</div>
+                        <div class="status-value neutral" id="serverProcessState">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">运行时间</div>
+                        <div class="status-value up" id="serverUptime">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">进程ID</div>
+                        <div class="status-value neutral" id="serverPid">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 系统资源监控 -->
+            <div class="card">
+                <h2>⚡ 系统资源</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">内存使用</div>
+                        <div class="status-value neutral" id="memoryUsage">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">CPU 使用</div>
+                        <div class="status-value neutral" id="cpuUsage">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">GPU 使用</div>
+                        <div class="status-value neutral" id="gpuUsage">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">系统温度</div>
+                        <div class="status-value neutral" id="temperature">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">运行时间</div>
+                        <div class="status-value up" id="uptime">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">系统负载</div>
+                        <div class="status-value neutral" id="systemLoad">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">数据发送</div>
+                        <div class="status-value up" id="bytesSent">0 MB</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">数据接收</div>
+                        <div class="status-value up" id="bytesReceived">0 MB</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 设备温度 -->
+            <div class="card">
+                <h2>🌡️ 设备温度</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">CPU温度</div>
+                        <div class="status-value neutral" id="devCpuTemp">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">GPU温度</div>
+                        <div class="status-value neutral" id="devGpuTemp">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">电池温度</div>
+                        <div class="status-value neutral" id="devBatteryTemp">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">内存温度</div>
+                        <div class="status-value neutral" id="devMemoryTemp">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">存储温度</div>
+                        <div class="status-value neutral" id="devStorageTemp">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">屏幕温度</div>
+                        <div class="status-value neutral" id="devDisplayTemp">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">WiFi温度</div>
+                        <div class="status-value neutral" id="devWifiTemp">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">充电器温度</div>
+                        <div class="status-value neutral" id="devChargerTemp">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">摄像头温度</div>
+                        <div class="status-value neutral" id="devCameraTemp">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">视频温度</div>
+                        <div class="status-value neutral" id="devVideoTemp">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">机身温度</div>
+                        <div class="status-value neutral" id="devBodyTemp">--</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 文件上传 -->
+            <div class="card">
+                <h2>📤 文件上传</h2>
+                <div class="form-group">
+                    <label>选择文件</label>
+                    <input type="file" id="fileInput" onchange="updateFileInfo()">
+                </div>
+                <div class="form-group">
+                    <label>文件信息</label>
+                    <p id="fileInfo" style="color: rgba(255, 255, 255, 0.6);">未选择文件</p>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="uploadProgress" style="width: 0%"></div>
+                </div>
+                <p style="margin-top: 12px; color: rgba(255, 255, 255, 0.6);" id="uploadSpeed"></p>
+                <div style="margin-top: 20px; display: flex; gap: 12px; align-items: stretch;">
+                    <button class="btn btn-primary" onclick="uploadFile()" style="margin-bottom: 0;">🚀 上传文件</button>
+                    <button class="btn btn-info" onclick="showUploadFolderModal()" style="margin-bottom: 0;">📂 上传文件夹</button>
+                </div>
+                <div class="response-message" id="uploadMessage"></div>
+            </div>
+            
+            <!-- 文件管理 -->
+            <div class="card">
+                <h2>📁 小文件管理</h2>
+                <div style="margin-bottom: 20px;">
+                    <button class="btn btn-success" onclick="listFiles()">🔄 刷新列表</button>
+                </div>
+                <div class="file-list" id="fileList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>点击"刷新列表"获取文件列表</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 下载工具 -->
+            <div class="card">
+                <h2>📥 快速下载</h2>
+                <div class="form-group">
+                    <label>文件名</label>
+                    <input type="text" id="downloadFilename" placeholder="输入文件名，如：resume_test.txt">
+                </div>
+                <button class="btn btn-primary" onclick="downloadFile()">⬇️ 下载文件</button>
+                <button class="btn btn-info" onclick="downloadResumeTest()">📄 下载测试文件</button>
+                <div class="response-message" id="downloadMessage"></div>
+            </div>
+            
+            <!-- 实时日志 -->
+            <div class="card">
+                <h2>📋 实时日志</h2>
+                <div style="margin-bottom: 15px;">
+                    <button class="btn btn-sm btn-info" onclick="toggleAutoScroll()">
+                        <span id="autoScrollText">🔄 自动滚动</span>
+                    </button>
+                    <button class="btn btn-sm btn-success" onclick="clearLogs()">🗑️ 清空日志</button>
+                </div>
+                <div class="logs-container" id="logsContainer"></div>
+            </div>
+        </div>
+        <div style="text-align: center">新一代高性能C++框架 Best Server</div>
+        <div style="text-align: center">Copyright © 1999 - 2026 Best Server. All Rights Reserved. Best Server 版权所有</div>
+    </div>
+    
+    <script>
+        let autoScroll = true;
+        let logCount = 0;
+        let fmCurrentPath = '';
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initTheme();
+            initServerStatus();
+            listFiles();
+            initLogs();
+            loadFileManagerList();
+            initPerformanceMonitor();
+        });
+        
+        // 初始化主题
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-theme');
+                document.getElementById('themeToggle').querySelector('.theme-icon').textContent = '🌙';
+            }
+        }
+        
+        // 切换主题
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.getElementById('themeToggle').querySelector('.theme-icon');
+            
+            if (body.classList.contains('dark-theme')) {
+                body.classList.remove('dark-theme');
+                themeIcon.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.classList.add('dark-theme');
+                themeIcon.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+        
+        // 更新文件信息
+        function updateFileInfo() {
+            const fileInput = document.getElementById('fileInput');
+            const fileInfo = document.getElementById('fileInfo');
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                fileInfo.innerHTML = `
+                    <strong>${file.name}</strong><br>
+                    <span style="font-size: 0.9em; color: rgba(255, 255, 255, 0.5);">${formatFileSize(file.size)}</span>
+                `;
+            } else {
+                fileInfo.textContent = '未选择文件';
+            }
+        }
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 上传文件
+        function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            if (!file) {
+                showUploadMessage('请选择要上传的文件', 'error');
+                return;
+            }
+            
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/upload', true);
+            // 使用 encodeURIComponent 确保 UTF-8 编码
+            xhr.setRequestHeader('X-Filename', encodeURIComponent(file.name));
+            xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+            
+            const startTime = Date.now();
+            const progressBar = document.getElementById('uploadProgress');
+            const speedText = document.getElementById('uploadSpeed');
+            
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    progressBar.style.width = percentComplete + '%';
+                    
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    if (elapsed > 0) {
+                        const speed = e.loaded / elapsed;
+                        speedText.textContent = '速度: ' + formatFileSize(speed) + '/s';
+                    }
+                }
+            };
+            
+            xhr.onload = function() {
+                progressBar.style.width = '100%';
+                if (xhr.status === 200) {
+                    showUploadMessage('✅ ' + xhr.responseText, 'success');
+                    addLog('文件上传成功: ' + file.name, 'success');
+                    listFiles();
+                } else {
+                    showUploadMessage('❌ 上传失败 (状态码: ' + xhr.status + ')', 'error');
+                    addLog('文件上传失败: ' + file.name, 'error');
+                }
+            };
+            
+            xhr.onerror = function() {
+                showUploadMessage('❌ 上传失败：网络错误', 'error');
+                addLog('文件上传失败: 网络错误', 'error');
+            };
+            
+            xhr.send(file);
+        }
+        
+        // 显示上传消息
+        function showUploadMessage(message, type) {
+            const messageDiv = document.getElementById('uploadMessage');
+            messageDiv.textContent = message;
+            messageDiv.style.display = 'block';
+            messageDiv.className = 'response-message response-' + type;
+        }
+        
+        // 列出文件
+        function listFiles() {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/files', true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    try {
+                        const files = JSON.parse(xhr.responseText);
+                        displayFileList(files);
+                    } catch (e) {
+                        displayFileList([]);
+                    }
+                } else {
+                    displayFileList([]);
+                }
+            };
+            xhr.onerror = function() {
+                displayFileList([]);
+            };
+            xhr.send();
+        }
+        
+        // 显示文件列表
+        function displayFileList(files) {
+            const fileList = document.getElementById('fileList');
+            if (!files || files.length === 0) {
+                fileList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>暂无文件</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            fileList.innerHTML = files.map(file => `
+                <div class="file-item">
+                    <div class="file-info">
+                        <span class="file-name">${file.name || file}</span>
+                        <span class="file-size">${file.size ? formatFileSize(file.size) : '未知大小'}</span>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-sm btn-primary" onclick="downloadFile('${file.name || file}')">⬇️</button>
+                        <button class="btn btn-sm" onclick="deleteFile('${file.name || file}')" style="background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%); color: white;">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 下载文件
+        function downloadFile(filename) {
+            if (!filename) {
+                filename = document.getElementById('downloadFilename').value;
+            }
+            if (!filename) {
+                alert('请输入文件名');
+                return;
+            }
+            addLog('开始下载文件: ' + filename, 'info');
+            window.location.href = '/files/' + filename;
+        }
+        
+        // 删除文件
+        function deleteFile(filename) {
+            if (!confirm('确定要删除文件 "' + filename + '" 吗？')) {
+                return;
+            }
+            
+            addLog('开始删除文件: ' + filename, 'info');
+            
+            const xhr = new XMLHttpRequest();
+            xhr.open('DELETE', '/api/files/' + encodeURIComponent(filename), true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        addLog('文件删除成功: ' + filename, 'success');
+                        alert('文件删除成功: ' + filename);
+                        listFiles();
+                    } catch (e) {
+                        addLog('文件删除成功: ' + filename, 'success');
+                        alert('文件删除成功: ' + filename);
+                        listFiles();
+                    }
+                } else {
+                    addLog('文件删除失败: ' + filename + ' (状态码: ' + xhr.status + ')', 'error');
+                    alert('文件删除失败 (状态码: ' + xhr.status + ')');
+                }
+            };
+            
+            xhr.onerror = function() {
+                addLog('文件删除失败: ' + filename + ' (网络错误)', 'error');
+                alert('文件删除失败 (网络错误)');
+            };
+            
+            xhr.send();
+        }
+        
+        // 下载测试文件
+        function downloadResumeTest() {
+            addLog('下载测试文件: resume_test.txt', 'info');
+            window.location.href = '/files/resume_test.txt';
+        }
+        
+        // 初始化服务器状态监控
+        function initServerStatus() {
+            setInterval(updateServerStatus, 3000);
+            updateServerStatus();
+        }
+        
+        // 更新服务器状态
+        // 更新服务器状态 - 从真实 API 获取数据
+        function updateServerStatus() {
+            // 并行获取服务器状态和系统资源
+            Promise.all([
+
+                fetch('/api/status').then(r => r.json()).catch(() => null),
+
+                fetch('/api/system').then(r => r.json()).catch(() => null),
+                fetch('/api/server-metrics').then(r => r.json()).catch(() => null)
+            ]).then(([status, metrics, serverMetrics]) => {
+                if (status) {
+                    document.getElementById('activeConnections').textContent = status.active_connections || 0;
+                    document.getElementById('totalRequests').textContent = (status.total_requests || 0).toLocaleString();
+                    
+                    // 计算请求/秒（基于当前总请求数和上次的差值）
+                    if (!this.lastTotalRequests) this.lastTotalRequests = 0;
+                    const requestDiff = (status.total_requests || 0) - this.lastTotalRequests;
+                    this.lastTotalRequests = status.total_requests || 0;
+                    document.getElementById('requestsPerSecond').textContent = Math.max(0, Math.round(requestDiff / 3)); // 3秒间隔
+                    
+                    document.getElementById('status2xx').textContent = status.status_2xx || 0;
+                    document.getElementById('status4xx').textContent = status.status_4xx || 0;
+                    document.getElementById('status5xx').textContent = status.status_5xx || 0;
+                    document.getElementById('bytesSent').textContent = formatFileSize(status.bytes_sent || 0);
+                    document.getElementById('bytesReceived').textContent = formatFileSize(status.bytes_received || 0);
+                }
+                
+                if (metrics) {
+                    // 更新内存使用
+                    if (metrics.memory && metrics.memory.usage_percent !== undefined) {
+                        document.getElementById('memoryUsage').textContent = metrics.memory.usage_percent.toFixed(1) + '%';
+                    }
+                    
+                    // 更新 CPU 使用（使用 load1 作为 CPU 指标）
+                    if (metrics.cpu && metrics.cpu.load1 !== undefined) {
+                        document.getElementById('cpuUsage').textContent = metrics.cpu.load1.toFixed(1) + '%';
+                    }
+                    
+                    // 更新 GPU 使用
+                    if (metrics.gpu && metrics.gpu.usage_percent !== undefined) {
+                        if (metrics.gpu.available === false) {
+                            document.getElementById('gpuUsage').textContent = 'N/A';
+                        } else {
+                            document.getElementById('gpuUsage').textContent = metrics.gpu.usage_percent.toFixed(1) + '%';
+                        }
+                    }
+                    
+                    // 更新系统温度
+                    if (metrics.temperature && metrics.temperature.celsius !== undefined) {
+                        if (metrics.temperature.available === false) {
+                            document.getElementById('temperature').textContent = 'N/A';
+                        } else {
+                            document.getElementById('temperature').textContent = metrics.temperature.celsius.toFixed(1) + '°C';
+                        }
+                    }
+                    
+                    // 更新系统负载
+                    if (metrics.cpu && metrics.cpu.load1 !== undefined) {
+                        document.getElementById('systemLoad').textContent = metrics.cpu.load1.toFixed(2);
+                    }
+                    
+                    // 更新系统运行时间
+                    if (metrics.uptime_seconds !== undefined) {
+                        document.getElementById('uptime').textContent = formatUptime(metrics.uptime_seconds);
+                    }
+                }
+                
+                // 更新服务器进程资源
+                if (serverMetrics) {
+                    if (serverMetrics.cpu_usage_percent !== undefined) {
+                        document.getElementById('serverCpuUsage').textContent = serverMetrics.cpu_usage_percent.toFixed(1) + '%';
+                    }
+                    if (serverMetrics.memory_usage !== undefined) {
+                        document.getElementById('serverMemoryUsage').textContent = serverMetrics.memory_usage.toFixed(1) + ' MB';
+                    }
+                    if (serverMetrics.virtual_memory !== undefined) {
+                        document.getElementById('serverVirtualMemory').textContent = serverMetrics.virtual_memory.toFixed(2) + ' GB';
+                    }
+                    if (serverMetrics.thread_count !== undefined) {
+                        document.getElementById('serverThreads').textContent = serverMetrics.thread_count + '个';
+                    }
+                    if (serverMetrics.open_files !== undefined) {
+                        document.getElementById('serverOpenFiles').textContent = serverMetrics.open_files + '个';
+                    }
+                    if (serverMetrics.process_state !== undefined) {
+                        const stateMap = {"R": "运行中", "S": "睡眠中", "D": "等待IO", "Z": "僵尸进程", "T": "停止"};
+                        document.getElementById('serverProcessState').textContent = stateMap[serverMetrics.process_state] || serverMetrics.process_state;
+                    }
+                    if (serverMetrics.uptime !== undefined) {
+                        document.getElementById('serverUptime').textContent = formatUptime(serverMetrics.uptime);
+                    }
+                    if (serverMetrics.pid !== undefined) {
+                        document.getElementById('serverPid').textContent = serverMetrics.pid;
+                    }
+                }
+            }).catch(err => {
+                console.error('获取服务器状态失败:', err);
+            });
+        }
+        
+        // 格式化运行时间
+        function formatUptime(seconds) {
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            
+            if (days > 0) {
+                return `${days}天 ${hours}小时 ${minutes}分钟`;
+            } else if (hours > 0) {
+                return `${hours}小时 ${minutes}分钟`;
+            } else {
+                return `${minutes}分钟`;
+            }
+        }
+
+        // 初始化性能监控
+        function initPerformanceMonitor() {
+            setInterval(fetchPerformanceMetrics, 3000);
+            fetchPerformanceMetrics();
+            
+            // 初始化设备温度监控
+            setInterval(fetchDeviceTemperatures, 3000);
+            fetchDeviceTemperatures();
+        }
+
+        // 获取性能指标
+        async function fetchPerformanceMetrics() {
+            try {
+                const response = await fetch('/api/performance');
+                const data = await response.json();
+                
+                if (data) {
+                    updatePerformanceMetrics(data);
+                }
+            } catch (error) {
+                console.error('获取性能指标失败:', error);
+                // 如果API不可用，使用服务器状态API中的数据
+                fetchPerformanceFromStatus();
+            }
+        }
+
+        // 从服务器状态API获取性能数据（备用方案）
+        async function fetchPerformanceFromStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                if (data) {
+                    const perfData = {
+                        upload_speed: data.bytes_sent_per_second || 0,
+                        download_speed: data.bytes_received_per_second || 0,
+                        disk_usage: calculateDiskUsage(),
+                        cpu_temp: null,
+                        gpu_temp: null,
+                        disk_temp: null,
+                        network_latency: null
+                    };
+                    updatePerformanceMetrics(perfData);
+                }
+            } catch (error) {
+                console.error('获取备用性能数据失败:', error);
+            }
+        }
+
+        // 计算磁盘使用率
+        function calculateDiskUsage() {
+            // 默认返回0，等待API数据
+            return 0;
+        }
+
+        // 更新性能指标
+        function updatePerformanceMetrics(data) {
+            // 更新上传速度
+            if (data.upload_speed !== undefined) {
+                const speedStr = formatSpeed(data.upload_speed);
+                document.getElementById('perfUploadSpeed').textContent = speedStr;
+                updatePerfValueClass('perfUploadSpeed', data.upload_speed / 1024 / 1024, 10, 50);
+            }
+
+            // 更新下载速度
+            if (data.download_speed !== undefined) {
+                const speedStr = formatSpeed(data.download_speed);
+                document.getElementById('perfDownloadSpeed').textContent = speedStr;
+                updatePerfValueClass('perfDownloadSpeed', data.download_speed / 1024 / 1024, 10, 50);
+            }
+
+            // 更新IOPS（读+写）
+            if (data.disk_iops_read !== undefined || data.disk_iops_write !== undefined) {
+                const totalIOPS = (data.disk_iops_read || 0) + (data.disk_iops_write || 0);
+                document.getElementById('perfDiskIOPS').textContent = totalIOPS;
+                updatePerfValueClass('perfDiskIOPS', totalIOPS, 10, 50, true);
+            }
+
+            // 更新磁盘使用率
+            if (data.disk_usage !== undefined) {
+                document.getElementById('perfDiskUsage').textContent = data.disk_usage.toFixed(1) + '%';
+                updatePerfValueClass('perfDiskUsage', data.disk_usage, 70, 90, true);
+            }
+
+            // 更新CPU温度
+            if (data.cpu_temp !== undefined && data.cpu_temp !== null) {
+                document.getElementById('perfCpuTemp').textContent = data.cpu_temp.toFixed(1) + '°C';
+                updatePerfValueClass('perfCpuTemp', data.cpu_temp, 60, 80, true);
+            } else {
+                document.getElementById('perfCpuTemp').textContent = '--°C';
+            }
+
+            // 更新GPU温度
+            if (data.gpu_temp !== undefined && data.gpu_temp !== null) {
+                document.getElementById('perfGpuTemp').textContent = data.gpu_temp.toFixed(1) + '°C';
+                updatePerfValueClass('perfGpuTemp', data.gpu_temp, 70, 85, true);
+            } else {
+                document.getElementById('perfGpuTemp').textContent = '--°C';
+            }
+
+            // 更新磁盘读速度
+            if (data.disk_read_speed !== undefined) {
+                const speedStr = formatSpeed(data.disk_read_speed);
+                document.getElementById('perfDiskReadSpeed').textContent = speedStr;
+                updatePerfValueClass('perfDiskReadSpeed', data.disk_read_speed / 1024, 10, 50);
+            } else {
+                document.getElementById('perfDiskReadSpeed').textContent = '0 KB/s';
+            }
+
+            // 更新磁盘写速度
+            if (data.disk_write_speed !== undefined) {
+                const speedStr = formatSpeed(data.disk_write_speed);
+                document.getElementById('perfDiskWriteSpeed').textContent = speedStr;
+                updatePerfValueClass('perfDiskWriteSpeed', data.disk_write_speed / 1024, 10, 50);
+            } else {
+                document.getElementById('perfDiskWriteSpeed').textContent = '0 KB/s';
+            }
+        }
+
+        // 格式化速度（自动选择单位）
+        function formatSpeed(bytesPerSec) {
+            if (bytesPerSec === 0) return '0 KB/s';
+            
+            const kb = bytesPerSec / 1024;
+            const mb = kb / 1024;
+            const gb = mb / 1024;
+            const tb = gb / 1024;
+            
+            if (tb >= 1) {
+                return tb.toFixed(2) + ' TB/s';
+            } else if (gb >= 1) {
+                return gb.toFixed(2) + ' GB/s';
+            } else if (mb >= 1) {
+                return mb.toFixed(2) + ' MB/s';
+            } else {
+                return kb.toFixed(2) + ' KB/s';
+            }
+        }
+
+        // 更新数值颜色类
+        function updatePerfValueClass(elementId, value, warningThreshold, criticalThreshold, inverse = false) {
+            const element = document.getElementById(elementId);
+            element.className = 'perf-value';
+
+            if (inverse) {
+                // 对于I/O、磁盘使用率、温度等，值越高越不好
+                if (value >= criticalThreshold) {
+                    element.classList.add('critical');
+                } else if (value >= warningThreshold) {
+                    element.classList.add('warning');
+                } else {
+                    element.classList.add('excellent');
+                }
+            } else {
+                // 对于速度等，值越高越好
+                if (value >= criticalThreshold) {
+                    element.classList.add('excellent');
+                } else if (value >= warningThreshold) {
+                    element.classList.add('good');
+                } else {
+                    element.classList.add('warning');
+                }
+            }
+        }
+
+        // 获取设备温度
+        async function fetchDeviceTemperatures() {
+            try {
+                const response = await fetch('/api/device-temperatures');
+                const data = await response.json();
+                
+                if (data) {
+                    updateDeviceTemperatures(data);
+                }
+            } catch (error) {
+                console.error('获取设备温度失败:', error);
+            }
+        }
+
+        // 更新设备温度显示
+        function updateDeviceTemperatures(data) {
+            const temps = ['cpu', 'gpu', 'battery', 'memory', 'storage', 'display', 'wifi', 'charger', 'camera', 'video', 'body'];
+            const elementIds = ['devCpuTemp', 'devGpuTemp', 'devBatteryTemp', 'devMemoryTemp', 'devStorageTemp', 'devDisplayTemp', 'devWifiTemp', 'devChargerTemp', 'devCameraTemp', 'devVideoTemp', 'devBodyTemp'];
+            
+            temps.forEach((temp, index) => {
+                const value = data[temp];
+                const element = document.getElementById(elementIds[index]);
+                
+                if (value !== undefined && value !== null && value > 0) {
+                    element.textContent = value.toFixed(1) + '°C';
+                    
+                    // 根据温度设置颜色
+                    element.className = 'status-value';
+                    if (value >= 60) {
+                        element.classList.add('critical');
+                    } else if (value >= 50) {
+                        element.classList.add('warning');
+                    } else if (value >= 40) {
+                        element.classList.add('neutral');
+                    } else {
+                        element.classList.add('up');
+                    }
+                } else {
+                    element.textContent = '--';
+                    element.className = 'status-value neutral';
+                }
+            });
+        }
+        
+        // 初始化日志
+        function initLogs() {
+            setInterval(fetchLogs, 5000);
+            addLog('系统初始化完成', 'success');
+            addLog('HTTP/2 协议已启用', 'info');
+            addLog('服务器运行正常', 'info');
+        }
+        
+        // 获取日志
+        function fetchLogs() {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/logs', true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    try {
+                        const logs = JSON.parse(xhr.responseText);
+                        if (Array.isArray(logs) && logs.length > 0) {
+                            displayLogs(logs);
+                        }
+                    } catch (e) {
+                        // 如果 API 不存在，继续使用本地模拟日志
+                    }
+                }
+            };
+            xhr.onerror = function() {
+                // 如果 API 不存在，继续使用本地模拟日志
+            };
+            xhr.send();
+        }
+        
+        // 显示日志
+        function displayLogs(logs) {
+            const logsContainer = document.getElementById('logsContainer');
+            logsContainer.innerHTML = logs.map(log => `
+                <div class="log-entry">
+                    <span class="log-time">${log.time || new Date().toLocaleTimeString('zh-CN')}</span>
+                    <span>${log.message || log}</span>
+                </div>
+            `).join('');
+            
+            if (autoScroll) {
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+            }
+        }
+        
+        // 添加日志
+        function addLog(message, type = 'info') {
+            const logsContainer = document.getElementById('logsContainer');
+            const now = new Date().toLocaleTimeString('zh-CN');
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            let color = '#00ff88';
+            if (type === 'error') {
+                color = '#ff4757';
+            } else if (type === 'success') {
+                color = '#00ff88';
+            } else if (type === 'info') {
+                color = '#00d2ff';
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">[${now}]</span>
+                <span style="color: ${color};">${message}</span>
+            `;
+            
+            logsContainer.appendChild(logEntry);
+            
+            if (autoScroll) {
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+            }
+            
+            // 限制日志条数
+            const entries = logsContainer.querySelectorAll('.log-entry');
+            if (entries.length > 50) {
+                logsContainer.removeChild(entries[0]);
+            }
+            
+            logCount++;
+        }
+        
+        // 切换自动滚动
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            const text = document.getElementById('autoScrollText');
+            text.textContent = autoScroll ? '🔄 自动滚动' : '⏸️ 已暂停';
+        }
+        
+        // 清空日志
+        function clearLogs() {
+            const logsContainer = document.getElementById('logsContainer');
+            logsContainer.innerHTML = '';
+            logCount = 0;
+            addLog('日志已清空', 'info');
+        }
+        
+        // 上传文件夹
+        async function showUploadFolderModal() {
+            try {
+                // 检查浏览器是否支持 File System Access API
+                if (!window.showDirectoryPicker) {
+                    // 降级方案：使用传统的文件选择器
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.webkitdirectory = true;
+                    input.multiple = true;
+                    
+                    input.onchange = async (e) => {
+                        const files = Array.from(e.target.files).map(f => ({
+                            file: f,
+                            path: f.webkitRelativePath || f.name
+                        }));
+                        
+                        if (files.length === 0) {
+                            addLog('未选择文件夹', 'error');
+                            return;
+                        }
+                        
+                        addLog(`开始上传文件夹，共 ${files.length} 个文件`, 'info');
+                        addLog('使用传统文件选择器（浏览器不支持 File System Access API）', 'info');
+                        await uploadFilesSequentially(files);
+                    };
+                    
+                    input.click();
+                    return;
+                }
+                
+                // 使用 File System Access API
+                const dirHandle = await window.showDirectoryPicker();
+                const files = [];
+                
+                // 递归读取文件夹中的所有文件
+                async function getFilesRecursively(dirHandle, path = '') {
+                    for await (const entry of dirHandle.values()) {
+                        const entryPath = path ? `${path}/${entry.name}` : entry.name;
+                        if (entry.kind === 'file') {
+                            const file = await entry.getFile();
+                            files.push({
+                                file: file,
+                                path: entryPath
+                            });
+                        } else if (entry.kind === 'directory') {
+                            await getFilesRecursively(entry, entryPath);
+                        }
+                    }
+                }
+                
+                await getFilesRecursively(dirHandle);
+                
+                if (files.length === 0) {
+                    addLog('文件夹为空', 'info');
+                    return;
+                }
+                
+                addLog(`开始上传文件夹，共 ${files.length} 个文件`, 'info');
+                await uploadFilesSequentially(files);
+                
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    addLog('选择文件夹失败: ' + error.message, 'error');
+                }
+            }
+        }
+        
+        // 依次上传文件
+        async function uploadFilesSequentially(files) {
+            let successCount = 0;
+            let failCount = 0;
+            const total = files.length;
+            
+            const progressBar = document.getElementById('uploadProgress');
+            const speedText = document.getElementById('uploadSpeed');
+            
+            progressBar.style.width = '0%';
+            
+            for (let i = 0; i < total; i++) {
+                const item = files[i];
+                const file = item.file;
+                const filePath = item.path;
+                
+                try {
+                    await uploadSingleFile(file, filePath);
+                    successCount++;
+                    addLog(`✓ ${filePath} 上传成功 (${i + 1}/${total})`, 'success');
+                } catch (error) {
+                    failCount++;
+                    addLog(`✗ ${filePath} 上传失败: ${error.message}`, 'error');
+                }
+                
+                // 更新进度
+                const percentComplete = ((i + 1) / total) * 100;
+                progressBar.style.width = percentComplete + '%';
+                speedText.textContent = `进度: ${i + 1}/${total} (${Math.round(percentComplete)}%)`;
+            }
+            
+            // 完成后刷新文件列表
+            listFiles();
+            
+            if (failCount === 0) {
+                addLog(`🎉 文件夹上传完成！共 ${successCount} 个文件`, 'success');
+            } else {
+                addLog(`⚠️ 文件夹上传完成！成功 ${successCount} 个，失败 ${failCount} 个`, 'info');
+            }
+            
+            progressBar.style.width = '100%';
+            speedText.textContent = '上传完成';
+        }
+        
+        // 上传单个文件
+        function uploadSingleFile(file, filePath) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/upload', true);
+                xhr.setRequestHeader('X-Filename', filePath);
+                
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        resolve();
+                    } else {
+                        reject(new Error(`状态码: ${xhr.status}`));
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    reject(new Error('网络错误'));
+                };
+                
+                xhr.send(file);
+            });
+        }
+
+        // ============ 文件管理器函数 ============
+        
+        // 加载文件管理器列表
+        async function loadFileManagerList(path = '') {
+            fmCurrentPath = path;
+            const fileList = document.getElementById('fmFileList');
+            const breadcrumb = document.getElementById('fmBreadcrumb');
+            
+            fileList.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>加载中...</p></div>';
+            
+            try {
+                const apiUrl = path ? `/api/browse/${encodeURIComponent(path)}` : '/api/browse';
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                
+                if (data.error) {
+                    fileList.innerHTML = `<div class="error-message">${data.error}</div>`;
+                    return;
+                }
+                
+                // 更新面包屑导航
+                updateFMBreadcrumb(path);
+                
+                if (data.items && data.items.length > 0) {
+                    const sortedItems = data.items.sort((a, b) => {
+                        if (a.is_dir !== b.is_dir) {
+                            return a.is_dir ? -1 : 1;
+                        }
+                        return a.name.localeCompare(b.name);
+                    });
+                    
+                    fileList.innerHTML = sortedItems.map(item => `
+                        <div class="file-manager-item" onclick="${item.is_dir ? `navigateToFolder(\`${item.name.replace(/`/g, '\\`')}\` )` : ''}">
+                            <div class="file-manager-icon ${item.is_dir ? 'folder' : 'file'}">
+                                ${item.is_dir ? '📁' : getFMFileIcon(item.name)}
+                            </div>
+                            <div class="file-manager-info">
+                                <div class="file-manager-name">${item.name}</div>
+                                <div class="file-manager-size">${formatFileSize(item.size)}</div>
+                            </div>
+                            ${!item.is_dir ? `
+                            <div class="file-manager-actions">
+                                <button class="btn-download" onclick="event.stopPropagation(); downloadFMFile(\`${item.name.replace(/`/g, '\\`')}\` )">
+                                    ⬇️
+                                </button>
+                                <button class="btn-delete" onclick="event.stopPropagation(); deleteFMItem(\`${item.name.replace(/`/g, '\\`')}\` )">
+                                    🗑️
+                                </button>
+                            </div>
+                            ` : `
+                            <div class="file-manager-actions">
+                                ${'showDirectoryPicker' in window ? `
+                                <button class="btn-download btn-zip" onclick="event.stopPropagation(); handleZipDownload(\`${item.name.replace(/`/g, '\\`')}\` )">
+                                    📦
+                                </button>
+                                ` : ''}
+                                <button class="btn-download" onclick="event.stopPropagation(); downloadFMFolder(\`${item.name.replace(/`/g, '\\`')}\` )">
+                                    ⬇️
+                                </button>
+                                <button class="btn-delete" onclick="event.stopPropagation(); deleteFMItem(\`${item.name.replace(/`/g, '\\`')}\` )">
+                                    🗑️
+                                </button>
+                            </div>
+                            `}
+                        </div>
+                    `).join('');
+                } else {
+                    fileList.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 40px;">此文件夹为空</p>';
+                }
+            } catch (error) {
+                fileList.innerHTML = `<div class="error-message">加载失败: ${error.message}</div>`;
+            }
+        }
+        
+        // 更新文件管理器面包屑导航
+        function updateFMBreadcrumb(path) {
+            const breadcrumb = document.getElementById('fmBreadcrumb');
+            const parts = path.split('/').filter(p => p);
+            
+            let html = '<span class="breadcrumb-item" onclick="loadFileManagerList(\'\')">根目录</span>';
+            
+            let currentPath = '';
+            parts.forEach((part, index) => {
+                currentPath += (currentPath ? '/' : '') + part;
+                html += ` <span class="breadcrumb-item">›</span>`;
+                html += `<span class="breadcrumb-item ${index === parts.length - 1 ? 'active' : ''}" onclick="loadFileManagerList(\`${currentPath.replace(/`/g, '\\`')}\` )">${part}</span>`;
+            });
+            
+            breadcrumb.innerHTML = html;
+        }
+        
+        // 导航到子文件夹
+        function navigateToFolder(folderName) {
+            const newPath = fmCurrentPath ? `${fmCurrentPath}/${folderName}` : folderName;
+            loadFileManagerList(newPath);
+        }
+        
+        // 获取文件管理器文件图标
+        function getFMFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = {
+                'pdf': '📄',
+                'doc': '📝',
+                'docx': '📝',
+                'xls': '📊',
+                'xlsx': '📊',
+                'ppt': '📈',
+                'pptx': '📈',
+                'jpg': '🖼️',
+                'jpeg': '🖼️',
+                'png': '🖼️',
+                'gif': '🖼️',
+                'mp4': '🎬',
+                'mp3': '🎵',
+                'zip': '📦',
+                'rar': '📦',
+                'txt': '📄',
+                'html': '🌐',
+                'css': '🎨',
+                'js': '⚡',
+                'json': '📋',
+            };
+            return icons[ext] || '📄';
+        }
+        
+        // 下载文件管理器文件
+        function downloadFMFile(filename) {
+            const path = fmCurrentPath ? `${fmCurrentPath}/${filename}` : filename;
+            window.location.href = `/files/${encodeURIComponent(path)}`;
+        }
+        
+        // 下载文件管理器文件夹
+        async function downloadFMFolder(folderName) {
+            const path = fmCurrentPath ? `${fmCurrentPath}/${folderName}` : folderName;
+
+            if ('showDirectoryPicker' in window) {
+                await downloadFMFolderWithFileSystemAPI(folderName, path);
+            } else {
+                await downloadFMFolderAsArchive(folderName, path);
+            }
+        }
+
+        // 使用 File System API 下载文件夹（使用新 API）
+        async function downloadFMFolderWithFileSystemAPI(folderName, path) {
+            try {
+                // 记录开始时间（用于总时间统计）
+                const fileStartTime = performance.now();
+                
+                // 使用新的 File System API：一次请求获取所有文件和下载链接
+                const response = await fetch(`/api/filesystem/download/${encodeURIComponent(path)}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert(`获取文件夹内容失败: ${data.error}`);
+                    return;
+                }
+                
+                const allItems = [];
+                // 从 files 数组中获取所有文件
+                for (const file of data.files) {
+                    allItems.push({
+                        name: file.path.split('/').pop(), // 文件名
+                        path: file.path, // 相对路径
+                        relativePath: file.path, // 相对路径
+                        is_dir: false,
+                        size: file.size,
+                        download_url: file.download_url // 使用服务器提供的下载 URL
+                    });
+                }
+                
+                if (allItems.length === 0) {
+                    alert('此文件夹中没有文件');
+                    return;
+                }
+                
+                if (!confirm(`确定要下载文件夹 "${folderName}" 吗？\n\n包含 ${data.total_files} 个文件，总大小 ${formatFileSize(data.total_bytes)}`)) {
+                    return;
+                }
+                
+                // 获取文件夹句柄，添加重试逻辑
+                let dirHandle;
+                let targetFolderHandle;
+                let retries = 3;
+                
+                while (retries > 0) {
+                    try {
+                        dirHandle = await window.showDirectoryPicker({
+                            mode: 'readwrite',
+                            startIn: 'downloads'
+                        });
+                        
+                        // 添加小延迟，确保句柄完全准备好
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
+                        targetFolderHandle = await dirHandle.getDirectoryHandle(folderName, { create: true });
+                        break;
+                    } catch (error) {
+                        retries--;
+                        if (retries === 0) {
+                            throw error;
+                        }
+                        console.log(`获取文件夹句柄失败，重试中... 剩余次数: ${retries}`);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                }
+                
+                const progressDiv = document.createElement('div');
+                progressDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); color: white; padding: 20px; border-radius: 10px; z-index: 10000; text-align: center; min-width: 300px;';
+                progressDiv.innerHTML = `
+                    <div style="font-size: 18px; margin-bottom: 10px;">正在下载文件夹 "${folderName}"</div>
+                    <div style="font-size: 14px; color: #aaa; margin-bottom: 10px;">共 ${data.total_files} 个文件，总大小 ${formatFileSize(data.total_bytes)}</div>
+                    <div style="margin-bottom: 10px;">
+                        <div style="background: #333; border-radius: 5px; overflow: hidden;">
+                            <div id="downloadProgressBar" style="height: 20px; background: linear-gradient(90deg, #667eea, #764ba2); width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                    <div id="downloadProgressText" style="font-size: 14px;">0 / ${data.total_files}</div>
+                `;
+                document.body.appendChild(progressDiv);
+                
+                let downloaded = 0;
+                const fileCount = allItems.length; // 新 API 只返回文件
+                
+                // 先创建所有文件夹结构（从文件路径中提取）
+                for (const item of allItems) {
+                    const pathParts = item.relativePath.split('/');
+                    if (pathParts.length > 1) {
+                        let currentHandle = targetFolderHandle;
+                        for (let i = 0; i < pathParts.length - 1; i++) {
+                            currentHandle = await currentHandle.getDirectoryHandle(pathParts[i], { create: true });
+                        }
+                    }
+                }
+                
+                // 下载所有文件（使用流式传输 + 分批下载）
+                const BATCH_SIZE = 5;  // 每批下载5个文件（提高下载速度）
+                
+                // 时间统计
+                const timingStats = {
+                    createFolders: 0,
+                    totalDownloadTime: 0,
+                    totalWriteTime: 0,
+                    files: {}
+                };
+                
+                console.time('createFolders');
+                // 先创建所有文件夹结构（从文件路径中提取）
+                for (const item of allItems) {
+                    const pathParts = item.relativePath.split('/');
+                    if (pathParts.length > 1) {
+                        let currentHandle = targetFolderHandle;
+                        for (let i = 0; i < pathParts.length - 1; i++) {
+                            currentHandle = await currentHandle.getDirectoryHandle(pathParts[i], { create: true });
+                        }
+                    }
+                }
+                console.timeEnd('createFolders');
+                
+                // 流式下载并写入文件
+                async function downloadFileWithStream(item) {
+                    const singleFileStartTime = performance.now();
+                    timingStats.files[item.name] = { download: 0, write: 0, total: 0 };
+                    
+                    try {
+                        const pathParts = item.relativePath.split('/');
+                        let currentHandle = targetFolderHandle;
+                        
+                        // 导航到目标文件夹
+                        for (let i = 0; i < pathParts.length - 1; i++) {
+                            currentHandle = await currentHandle.getDirectoryHandle(pathParts[i]);
+                        }
+                        
+                        // 创建文件句柄
+                        const fileHandle = await currentHandle.getFileHandle(item.name, { create: true });
+                        const writable = await fileHandle.createWritable();
+                        
+                        // 下载时间
+                        const downloadStartTime = performance.now();
+                        const response = await fetch(item.download_url);
+                        const reader = response.body.getReader();
+                        
+                        let downloadedBytes = 0;
+                        let totalBytes = 0;
+                        
+                        // 流式写入
+                        while (true) {
+                            const readStartTime = performance.now();
+                            const { done, value } = await reader.read();
+                            const readTime = performance.now() - readStartTime;
+                            
+                            if (done) break;
+                            
+                            const writeStartTime = performance.now();
+                            await writable.write(value);
+                            const writeTime = performance.now() - writeStartTime;
+                            
+                            downloadedBytes += value.length;
+                            totalBytes += value.length;
+                            
+                            timingStats.files[item.name].download += readTime;
+                            timingStats.files[item.name].write += writeTime;
+                        }
+                        
+                        const downloadTime = performance.now() - downloadStartTime;
+                        timingStats.files[item.name].download = downloadTime;
+                        
+                        await writable.close();
+                        
+                        const totalTime = performance.now() - singleFileStartTime;
+                        timingStats.files[item.name].total = totalTime;
+                        timingStats.totalDownloadTime += downloadTime;
+                        timingStats.totalWriteTime += (totalTime - downloadTime);
+                        
+                        // 更新进度
+                        const currentDownloaded = ++downloaded;
+                        const progressBar = document.getElementById('downloadProgressBar');
+                        const progressText = document.getElementById('downloadProgressText');
+                        const percentage = (currentDownloaded / fileCount * 100).toFixed(1);
+                        
+                        // 计算下载时间
+                        const elapsedSeconds = ((performance.now() - fileStartTime) / 1000).toFixed(1);
+                        const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+                        const elapsedSecondsDisplay = (elapsedSeconds % 60).toFixed(1);
+                        const timeDisplay = elapsedMinutes > 0 
+                            ? `${elapsedMinutes}分${elapsedSecondsDisplay}秒` 
+                            : `${elapsedSecondsDisplay}秒`;
+                        
+                        console.log(`[${currentDownloaded}/${fileCount}] ${item.name}:`, {
+                            size: item.size,
+                            totalTime: totalTime.toFixed(2) + 'ms',
+                            download: downloadTime.toFixed(2) + 'ms',
+                            write: (totalTime - downloadTime).toFixed(2) + 'ms',
+                            speed: ((item.size / 1024) / (downloadTime / 1000)).toFixed(2) + ' KB/s'
+                        });
+                        
+                        if (progressBar) {
+                            progressBar.style.width = `${percentage}%`;
+                        }
+                        if (progressText) {
+                            progressText.textContent = `${currentDownloaded} / ${fileCount} 个文件 (${percentage}%) - 耗时: ${timeDisplay}`;
+                        }
+                        
+                    } catch (error) {
+                        console.error(`下载文件失败 ${item.name}:`, error);
+                        timingStats.files[item.name] = { error: error.message };
+                    }
+                }
+                
+                // 分批下载（避免浏览器HTTPS连接限制）
+                console.time('totalDownload');
+                let currentIndex = 0;
+                
+                while (currentIndex < allItems.length) {
+                    const batch = allItems.slice(currentIndex, currentIndex + BATCH_SIZE);
+                    console.log(`开始下载第 ${Math.floor(currentIndex / BATCH_SIZE) + 1} 批，共 ${batch.length} 个文件`);
+                    
+                    const batchPromises = batch.map(item => downloadFileWithStream(item));
+                    await Promise.all(batchPromises);
+                    
+                    currentIndex += BATCH_SIZE;
+                }
+                
+                console.timeEnd('totalDownload');
+                
+                console.log('=== 时间统计 ===');
+                console.log('创建文件夹:', timingStats.createFolders.toFixed(2) + 'ms');
+                console.log('总下载时间:', timingStats.totalDownloadTime.toFixed(2) + 'ms');
+                console.log('总写入时间:', timingStats.totalWriteTime.toFixed(2) + 'ms');
+                console.log('总时间:', (performance.now() - fileStartTime).toFixed(2) + 'ms');
+                console.log('平均每个文件:', ((performance.now() - fileStartTime) / fileCount).toFixed(2) + 'ms');
+                console.log('最慢的5个文件:', Object.entries(timingStats.files)
+                    .filter(([_, stats]) => stats.total && !stats.error)
+                    .sort((a, b) => b[1].total - a[1].total)
+                    .slice(0, 5)
+                    .map(([name, stats]) => `${name}: ${stats.total.toFixed(2)}ms`)
+                );
+                
+                document.body.removeChild(progressDiv);
+                alert(`下载完成！已将文件夹 "${folderName}" 及其所有内容下载到您选择的位置。`);
+                
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.log('用户取消了选择文件夹');
+                } else {
+                    console.error('下载文件夹失败:', error);
+                    alert('下载文件夹失败，请重试');
+                }
+            }
+        }
+        
+        // 处理压缩包下载按钮点击
+        function handleZipDownload(itemName) {
+            const path = fmCurrentPath ? `${fmCurrentPath}/${itemName}` : itemName;
+            downloadFMFolderAsArchive(itemName, path);
+        }
+        
+        // 下载为压缩包
+        async function downloadFMFolderAsArchive(folderName, path) {
+            try {
+                const response = await fetch(`/api/browse/${encodeURIComponent(path)}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert(`获取文件夹内容失败: ${data.error}`);
+                    return;
+                }
+                
+                const allFiles = [];
+                
+                async function collectFiles(folderPath, prefix = '') {
+                    try {
+                        const res = await fetch(`/api/browse/${encodeURIComponent(folderPath)}`);
+                        const result = await res.json();
+                        
+                        if (result.items) {
+                            for (const item of result.items) {
+                                const itemPath = folderPath ? `${folderPath}/${item.name}` : item.name;
+                                
+                                if (item.is_dir) {
+                                    await collectFiles(itemPath, `${prefix}${item.name}/`);
+                                } else {
+                                    allFiles.push({
+                                        name: item.name,
+                                        path: itemPath,
+                                        size: item.size
+                                    });
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`收集文件失败 ${folderPath}:`, error);
+                    }
+                }
+                
+                await collectFiles(path);
+                
+                if (allFiles.length === 0) {
+                    alert('此文件夹中没有文件');
+                    return;
+                }
+                
+                if (!confirm(`您的浏览器不支持 File System API。\n\n确定要下载文件夹 "${folderName}" 中的 ${allFiles.length} 个文件吗？\n\n文件将下载为压缩包。`)) {
+                    return;
+                }
+                
+                const progressDiv = document.createElement('div');
+                progressDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); color: white; padding: 20px; border-radius: 10px; z-index: 10000; text-align: center; min-width: 300px;';
+                progressDiv.innerHTML = `
+                    <div style="font-size: 18px; margin-bottom: 10px;">正在打包文件夹 "${folderName}"</div>
+                    <div style="font-size: 14px; color: #aaa; margin-bottom: 10px;">共 ${allFiles.length} 个文件</div>
+                    <div style="margin-bottom: 10px;">
+                        <div style="background: #333; border-radius: 5px; overflow: hidden;">
+                            <div id="fmProgressBar" style="height: 20px; background: linear-gradient(90deg, #667eea, #764ba2); width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                    <div id="fmProgressText" style="font-size: 14px;">服务器正在打包，请稍候...</div>
+                `;
+                document.body.appendChild(progressDiv);
+                
+                const downloadUrl = `/api/folder/download/${encodeURIComponent(path)}`;
+                
+                async function downloadWithRetry() {
+                    let retryCount = 0;
+                    const maxRetries = 60; // 最多轮询60次（120秒）
+                    
+                    while (retryCount < maxRetries) {
+                        // 使用HEAD请求检查打包状态
+                        const headResponse = await fetch(downloadUrl, {
+                            method: 'HEAD',
+                            signal: AbortSignal.timeout(10000)
+                        }).catch(err => {
+                            if (err.name === 'TimeoutError') {
+                                throw new Error('请求超时');
+                            }
+                            throw err;
+                        });
+                        
+                        if (headResponse.status === 202) {
+                            // 正在打包中，继续轮询
+                            retryCount++;
+                            const progressText = document.getElementById('fmProgressText');
+                            if (progressText) progressText.textContent = `正在打包... (${retryCount}次检查)`;
+                            await new Promise(resolve => setTimeout(resolve, 2000)); // 每2秒检查一次
+                            continue;
+                        }
+                        
+                        if (headResponse.status === 200) {
+                            // 打包完成，触发浏览器原生下载
+                            const progressText = document.getElementById('fmProgressText');
+                            const progressBar = document.getElementById('fmProgressBar');
+                            if (progressText) progressText.textContent = '打包完成，正在下载...';
+                            if (progressBar) progressBar.style.width = '100%';
+                            
+                            setTimeout(() => {
+                                if (progressDiv && progressDiv.parentNode) {
+                                    document.body.removeChild(progressDiv);
+                                }
+                            }, 2000);
+                            
+                            // 使用window.location.href触发浏览器原生下载
+                            // 浏览器会自动处理流式传输，不会将整个文件加载到内存中
+                            window.location.href = downloadUrl;
+                            return;
+                        }
+                        
+                        if (!headResponse.ok) {
+                            throw new Error(`下载失败: ${headResponse.status}`);
+                        }
+                    }
+                    
+                    throw new Error('打包超时，请稍后再试');
+                }
+                
+                downloadWithRetry().catch(err => {
+                    console.error('下载失败:', err);
+                    if (progressDiv && progressDiv.parentNode) {
+                        document.body.removeChild(progressDiv);
+                    }
+                    alert(`下载失败: ${err.message}`);
+                });
+                
+            } catch (error) {
+                console.error('下载文件夹失败:', error);
+                alert('下载文件夹失败，请重试');
+            }
+        }
+        
+        // 删除文件管理器项目
+        async function deleteFMItem(name) {
+            if (!confirm(`确定要删除 "${name}" 吗？`)) {
+                return;
+            }
+            
+            const path = fmCurrentPath ? `${fmCurrentPath}/${name}` : name;
+            
+            try {
+                const response = await fetch(`/api/files/${encodeURIComponent(path)}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    loadFileManagerList(fmCurrentPath);
+                } else {
+                    alert(`删除失败: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`删除失败: ${error.message}`);
+            }
+        }
+        
+        // 刷新文件管理器列表
+        function refreshFileList() {
+            loadFileManagerList(fmCurrentPath);
+        }
+        
+        // 显示上传模态框
+        function showUploadModal() {
+            document.getElementById('fmUploadModal').style.display = 'flex';
+        }
+        
+        // 关闭上传模态框
+        function closeUploadModal() {
+            document.getElementById('fmUploadModal').style.display = 'none';
+            document.getElementById('fmFileInput').value = '';
+            document.getElementById('fmFolderInput').value = '';
+        }
+        
+        // 显示创建文件夹模态框
+        function showCreateFolderModal() {
+            document.getElementById('fmCreateFolderModal').style.display = 'flex';
+            document.getElementById('fmFolderNameInput').focus();
+        }
+        
+        // 关闭创建文件夹模态框
+        function closeCreateFolderModal() {
+            document.getElementById('fmCreateFolderModal').style.display = 'none';
+            document.getElementById('fmFolderNameInput').value = '';
+        }
+        
+        // 创建文件夹
+        async function createFMFolder() {
+            const folderName = document.getElementById('fmFolderNameInput').value.trim();
+            
+            if (!folderName) {
+                alert('请输入文件夹名称');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/folder/create', {
+                    method: 'POST',
+                    headers: {
+                        'X-Foldername': encodeURIComponent(folderName),
+                        'X-Parent-Path': fmCurrentPath ? encodeURIComponent(fmCurrentPath) : 'ROOT'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    closeCreateFolderModal();
+                    loadFileManagerList(fmCurrentPath);
+                } else {
+                    alert(`创建失败: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`创建失败: ${error.message}`);
+            }
+        }
+        
+        // 上传文件
+        async function uploadFMFiles(files) {
+            files = Array.from(files);
+            
+            console.log('开始上传，文件数量:', files.length);
+            
+            const uploadProgress = document.getElementById('fmUploadProgress');
+            const progressBar = document.getElementById('fmProgressBar');
+            const progressText = document.getElementById('fmProgressText');
+            
+            uploadProgress.style.display = 'block';
+            
+            const uploadStartTime = Date.now();
+            
+            function formatElapsedTime(ms) {
+                const seconds = Math.floor(ms / 1000);
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = seconds % 60;
+                return `${minutes}分${remainingSeconds}秒`;
+            }
+            
+            let uploaded = 0;
+            const total = files.length;
+            const CHUNK_SIZE = 100 * 1024 * 1024;
+            
+            const fileChunks = files.map(file => Math.ceil(file.size / CHUNK_SIZE));
+            const totalChunksAll = fileChunks.reduce((sum, chunks) => sum + chunks, 0);
+            console.log(`总文件数: ${total}, 总块数: ${totalChunksAll}`);
+            
+            let completedFilesChunks = 0;
+            
+            for (const file of files) {
+                const totalChunks = fileChunks[uploaded];
+                let uploadSuccess = false;
+                
+                console.log('处理文件:', file.name, '大小:', file.size, 'relativePath:', file.relativePath, 'webkitRelativePath:', file.webkitRelativePath);
+
+                let filename = file.name;
+                let filepath = '';
+
+                // 优先使用 relativePath（拖拽文件夹时设置），其次使用 webkitRelativePath
+                const filePath = file.relativePath || file.webkitRelativePath;
+
+                if (filePath) {
+                    const pathParts = filePath.split('/');
+                    filename = pathParts[pathParts.length - 1];
+                    const relativePath = pathParts.slice(0, pathParts.length - 1).join('/');
+                    
+                    console.log('文件夹上传 - filename:', filename, 'relativePath:', relativePath, 'currentPath:', fmCurrentPath);
+                    
+                    if (fmCurrentPath && relativePath) {
+                        filepath = fmCurrentPath + '/' + relativePath;
+                    } else if (relativePath) {
+                        filepath = relativePath;
+                    } else if (fmCurrentPath) {
+                        filepath = fmCurrentPath;
+                    }
+                } else {
+                    if (fmCurrentPath) {
+                        filepath = fmCurrentPath;
+                    }
+                }
+                
+                console.log('上传到:', filepath, '文件名:', filename);
+                
+                if (file.size > CHUNK_SIZE) {
+                    let chunksUploaded = 0;
+                    let chunksFailed = 0;
+                    const MAX_RETRIES = 3;
+                    const MAX_CONCURRENT_UPLOADS = 5;
+                    
+                    const chunkTasks = [];
+                    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+                        const start = chunkIndex * CHUNK_SIZE;
+                        const end = Math.min((chunkIndex + 1) * CHUNK_SIZE, file.size);
+                        const chunkSize = end - start;
+                        
+                        chunkTasks.push({
+                            index: chunkIndex,
+                            start: start,
+                            end: end,
+                            size: chunkSize,
+                            retries: 0,
+                            status: 'pending'
+                        });
+                    }
+                    
+                    const uploadChunkWithRetry = async (task) => {
+                        let chunk = null;
+                        
+                        while (task.retries <= MAX_RETRIES && task.status === 'pending') {
+                            try {
+                                task.status = 'uploading';
+                                console.log(`上传块 ${task.index + 1}/${totalChunks}: ${task.start}-${task.end} (${task.size} bytes)${task.retries > 0 ? ' (重试 ' + task.retries + '/' + MAX_RETRIES + ')' : ''}`);
+                                
+                                chunk = await file.slice(task.start, task.end).arrayBuffer();
+                                
+                                const success = await uploadFMChunk(
+                                    chunk,
+                                    filename,
+                                    filepath,
+                                    task.index,
+                                    totalChunks,
+                                    task.start,
+                                    task.size
+                                );
+                                
+                                chunk = null;
+                                
+                                if (success) {
+                                    task.status = 'success';
+                                    chunksUploaded++;
+                                    console.log(`块 ${task.index + 1}/${totalChunks} 上传成功`);
+                                    return;
+                                } else {
+                                    task.retries++;
+                                    task.status = 'pending';
+                                }
+                            } catch (error) {
+                                console.error(`块 ${task.index + 1}/${totalChunks} 上传异常:`, error);
+                                task.retries++;
+                                task.status = 'pending';
+                                chunk = null;
+                            }
+                        }
+                        
+                        if (task.status !== 'success') {
+                            task.status = 'failed';
+                            chunksFailed++;
+                            console.error(`块 ${task.index + 1}/${totalChunks} 上传失败`);
+                        }
+                    };
+                    
+                    const uploadPromises = [];
+                    for (let i = 0; i < Math.min(MAX_CONCURRENT_UPLOADS, chunkTasks.length); i++) {
+                        uploadPromises.push((async () => {
+                            while (true) {
+                                const task = chunkTasks.find(t => t.status === 'pending');
+                                if (!task) break;
+                                await uploadChunkWithRetry(task);
+                                
+                                const totalChunksProcessed = completedFilesChunks + chunksUploaded + chunksFailed;
+                                const percentage = Math.round((totalChunksProcessed / totalChunksAll) * 100);
+                                progressBar.style.width = percentage + '%';
+                                const elapsedTime = formatElapsedTime(Date.now() - uploadStartTime);
+                                progressText.textContent = `上传中... ${uploaded}/${total} 文件, ${chunksUploaded}/${totalChunks} 块成功, ${chunksFailed} 块失败 (${percentage}%) - 用时: ${elapsedTime}`;
+                            }
+                        })());
+                    }
+                    
+                    await Promise.all(uploadPromises);
+                    
+                    if (chunksFailed > 0) {
+                        uploadSuccess = false;
+                        alert(`上传警告: ${file.name} - ${chunksFailed} 个分块上传失败（共${totalChunks}个分块）`);
+                        console.warn(`文件 ${file.name} 上传完成，但有 ${chunksFailed} 个分块失败`);
+                    } else {
+                        console.log('文件分块上传完成:', file.name);
+                        uploadSuccess = true;
+                        completedFilesChunks += totalChunks;
+                        uploaded++;
+                    }
+                } else {
+                    console.log('使用单次上传，文件大小:', file.size);
+                    
+                    let fileContent = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            console.log('文件读取完成，大小:', e.target.result.byteLength);
+                            resolve(e.target.result);
+                        };
+                        reader.onerror = (e) => {
+                            console.error('文件读取失败:', e);
+                            resolve(null);
+                        };
+                        reader.readAsArrayBuffer(file);
+                    });
+                    
+                    if (!fileContent) {
+                        console.error('读取文件失败:', file.name);
+                        continue;
+                    }
+                    
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/upload', true);
+                    
+                    if (filename) {
+                        xhr.setRequestHeader('X-Filename', encodeURIComponent(filename));
+                    }
+                    if (filepath) {
+                        xhr.setRequestHeader('X-File-Path', encodeURIComponent(filepath));
+                    }
+                    
+                    xhr.onload = function() {
+                        console.log('上传响应:', file.name, xhr.status, xhr.responseText);
+                        if (xhr.status === 200) {
+                            uploadSuccess = true;
+                            const totalChunksProcessed = completedFilesChunks + 1;
+                            const percentage = Math.round((totalChunksProcessed / totalChunksAll) * 100);
+                            progressBar.style.width = percentage + '%';
+                            const elapsedTime = formatElapsedTime(Date.now() - uploadStartTime);
+                            progressText.textContent = `上传中... ${uploaded}/${total} 文件 (1/1 块成功) (${percentage}%) - 用时: ${elapsedTime}`;
+                        } else {
+                            console.error('上传失败:', file.name, xhr.status, xhr.responseText);
+                            alert(`上传失败: ${file.name} - ${xhr.status} - ${xhr.responseText}`);
+                        }
+                    };
+                    
+                    xhr.onerror = function(e) {
+                        console.error('上传失败:', file.name, e);
+                        alert(`上传失败: ${file.name} - 网络错误`);
+                    };
+                    
+                    xhr.onloadend = function() {
+                        xhr.abort();
+                    };
+                    
+                    console.log('发送请求:', file.name, '内容大小:', fileContent.byteLength);
+                    xhr.send(fileContent);
+                    
+                    await new Promise((resolve) => {
+                        xhr.onloadend = resolve;
+                        xhr.onerror = resolve;
+                    });
+                    
+                    fileContent = null;
+                    
+                    if (uploadSuccess) {
+                        completedFilesChunks += totalChunks;
+                        uploaded++;
+                    }
+                }
+            }
+            
+            const totalElapsedTime = formatElapsedTime(Date.now() - uploadStartTime);
+            alert(`上传完成！共上传 ${uploaded} 个文件，总用时: ${totalElapsedTime}`);
+            
+            uploadProgress.style.display = 'none';
+            progressBar.style.width = '0%';
+            closeUploadModal();
+            loadFileManagerList(fmCurrentPath);
+        }
+        
+        // 上传单个文件块
+        function uploadFMChunk(chunk, filename, filepath, chunkIndex, totalChunks, chunkOffset, chunkSize) {
+            return new Promise((resolve) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/upload', true);
+                
+                xhr.setRequestHeader('X-Filename', encodeURIComponent(filename));
+                xhr.setRequestHeader('X-File-Path', encodeURIComponent(filepath));
+                xhr.setRequestHeader('X-Chunk-Index', chunkIndex.toString());
+                xhr.setRequestHeader('X-Total-Chunks', totalChunks.toString());
+                xhr.setRequestHeader('X-Chunk-Offset', chunkOffset.toString());
+                xhr.setRequestHeader('X-Chunk-Size', chunkSize.toString());
+                xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+                
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        console.log(`块 ${chunkIndex + 1}/${totalChunks} 上传成功`);
+                        resolve(true);
+                    } else {
+                        console.error(`块 ${chunkIndex + 1}/${totalChunks} 上传失败:`, xhr.status, xhr.responseText);
+                        resolve(false);
+                    }
+                };
+                
+                xhr.onerror = function(e) {
+                    console.error(`块 ${chunkIndex + 1}/${totalChunks} 上传失败:`, e);
+                    resolve(false);
+                };
+                
+                xhr.onloadend = function() {
+                    xhr.abort();
+                };
+                
+                xhr.send(chunk);
+            });
+        }
+
+        // 全屏拖拽处理函数
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        function handleDragEnter(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            document.body.classList.add('drag-over');
+            document.getElementById('dragOverlay').classList.add('show');
+        }
+
+        function handleDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // 检查是否真的离开了body
+            if (event.clientX === 0 && event.clientY === 0) {
+                document.body.classList.remove('drag-over');
+                document.getElementById('dragOverlay').classList.remove('show');
+            }
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // 移除拖拽样式
+            document.body.classList.remove('drag-over');
+            document.getElementById('dragOverlay').classList.remove('show');
+
+            // 获取拖拽的项目
+            const items = event.dataTransfer.items;
+            if (items && items.length > 0) {
+                console.log(`拖拽了 ${items.length} 个项目`);
+
+                // 使用File System API处理文件夹
+                const allFiles = [];
+                let pendingCount = 0;
+
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    const entry = item.webkitGetAsEntry();
+
+                    if (entry) {
+                        pendingCount++;
+                        if (entry.isFile) {
+                            // 处理文件
+                            entry.file((file) => {
+                                file.relativePath = file.name;
+                                allFiles.push(file);
+                                pendingCount--;
+
+                                if (pendingCount === 0) {
+                                    console.log(`总共收集到 ${allFiles.length} 个文件`);
+                                    uploadDraggedFiles(allFiles);
+                                }
+                            });
+                        } else if (entry.isDirectory) {
+                            // 处理文件夹
+                            console.log(`检测到文件夹: ${entry.name}`);
+                            readDirectoryEntryBFS(entry, entry.name, allFiles, () => {
+                                pendingCount--;
+                                if (pendingCount === 0) {
+                                    console.log(`总共收集到 ${allFiles.length} 个文件`);
+                                    uploadDraggedFiles(allFiles);
+                                }
+                            });
+                        }
+                    }
+                }
+
+                // 如果没有有效的entry，回退到传统方式
+                if (pendingCount === 0) {
+                    const files = event.dataTransfer.files;
+                    if (files.length > 0) {
+                        console.log('回退到传统文件处理');
+                        for (let i = 0; i < files.length; i++) {
+                            files[i].relativePath = files[i].name;
+                            allFiles.push(files[i]);
+                        }
+                        uploadDraggedFiles(allFiles);
+                    }
+                }
+            }
+        }
+
+        // BFS（广度优先搜索）读取目录条目
+        function readDirectoryEntryBFS(directoryEntry, path, allFiles, callback) {
+            console.log('BFS开始读取目录:', path);
+            const queue = [{ entry: directoryEntry, path: path }];
+            let dirsProcessing = 0;
+            let filesPending = 0;
+            let isFinished = false;
+            
+            function checkCompletion() {
+                if (isFinished) return;
+                
+                console.log('检查完成状态 - 队列:', queue.length, '处理中的目录:', dirsProcessing, '待处理文件:', filesPending);
+                
+                if (queue.length === 0 && dirsProcessing === 0 && filesPending === 0) {
+                    isFinished = true;
+                    console.log('BFS完成，共收集', allFiles.length, '个文件');
+                    callback();
+                }
+            }
+            
+            function processQueue() {
+                // 每次处理最多3个目录
+                const maxConcurrent = 3;
+                
+                while (queue.length > 0 && dirsProcessing < maxConcurrent) {
+                    const { entry: currentEntry, path: currentPath } = queue.shift();
+                    dirsProcessing++;
+                    console.log('开始处理目录:', currentPath, '当前处理中:', dirsProcessing);
+                    
+                    processDirectory(currentEntry, currentPath);
+                }
+            }
+            
+            function processDirectory(dirEntry, dirPath) {
+                const dirReader = dirEntry.createReader();
+                
+                const readEntries = () => {
+                    dirReader.readEntries((results) => {
+                        if (results.length > 0) {
+                            console.log('读取到', results.length, '个条目，来自:', dirPath);
+                            results.forEach(result => {
+                                const entryPath = dirPath + '/' + result.name;
+                                
+                                if (result.isFile) {
+                                    filesPending++;
+                                    console.log('发现文件:', result.name, '路径:', entryPath);
+                                    result.file((file) => {
+                                        file.relativePath = entryPath;
+                                        allFiles.push(file);
+                                        filesPending--;
+                                        console.log('文件读取完成:', result.name, '剩余待处理:', filesPending);
+                                        
+                                        if (filesPending === 0) {
+                                            checkCompletion();
+                                        }
+                                    });
+                                } else if (result.isDirectory) {
+                                    console.log('发现子目录:', result.name, '路径:', entryPath);
+                                    queue.push({ entry: result, path: entryPath });
+                                }
+                            });
+                            
+                            // 继续读取（浏览器可能分批返回）
+                            readEntries();
+                        } else {
+                            console.log('目录读取完成:', dirPath);
+                            dirsProcessing--;
+                            
+                            if (queue.length > 0) {
+                                console.log('继续处理队列，剩余:', queue.length);
+                                processQueue();
+                            } else {
+                                console.log('队列为空，检查完成状态');
+                                checkCompletion();
+                            }
+                        }
+                    }, (error) => {
+                        console.error('读取目录失败:', dirPath, error);
+                        dirsProcessing--;
+                        checkCompletion();
+                    });
+                };
+                
+                readEntries();
+            }
+            
+            console.log('开始处理队列');
+            processQueue();
+        }
+
+        // 上传拖拽的文件
+        async function uploadDraggedFiles(files) {
+            if (!files || files.length === 0) {
+                return;
+            }
+
+            // 显示上传模态框
+            const modal = document.getElementById('fmUploadModal');
+            const progress = document.getElementById('fmUploadProgress');
+            const progressBar = document.getElementById('fmProgressBar');
+            const progressText = document.getElementById('fmProgressText');
+
+            modal.style.display = 'flex';
+            progress.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressText.textContent = `准备上传 ${files.length} 个文件...`;
+
+            // 开始上传
+            await uploadFMFiles(files);
+
+            progressText.textContent = '上传完成！';
+            setTimeout(() => {
+                modal.style.display = 'none';
+                progress.style.display = 'none';
+                loadFileManagerList(fmCurrentPath);
+            }, 1500);
+        }
+    </script>
+    
+    <!-- 文件管理器模态框 -->
+    <div class="modal" id="fmUploadModal" style="display: none;">
+        <div class="modal-content">
+            <h2 class="modal-title">上传文件</h2>
+            <div class="upload-area" id="fmUploadArea">
+                <div class="upload-icon">📤</div>
+                <p class="upload-text">拖拽文件到此处或点击选择</p>
+                <input type="file" id="fmFileInput" multiple style="display: none;">
+                <input type="file" id="fmFolderInput" webkitdirectory directory multiple style="display: none;">
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="document.getElementById('fmFileInput').click()">
+                        选择文件
+                    </button>
+                    <button class="btn btn-success" onclick="document.getElementById('fmFolderInput').click()">
+                        选择文件夹
+                    </button>
+                </div>
+            </div>
+            <div class="upload-progress" id="fmUploadProgress">
+                <div class="upload-progress-bar" id="fmProgressBar"></div>
+                <div class="upload-progress-text" id="fmProgressText">上传中...</div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeUploadModal()">取消</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="fmCreateFolderModal" style="display: none;">
+        <div class="modal-content">
+            <h2 class="modal-title">新建文件夹</h2>
+            <input type="text" class="modal-input" id="fmFolderNameInput" placeholder="文件夹名称">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeCreateFolderModal()">取消</button>
+                <button class="btn btn-primary" onclick="createFMFolder()">创建</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // 文件输入处理
+        document.getElementById('fmFileInput').addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                uploadFMFiles(e.target.files);
+            }
+        });
+        
+        // 文件夹输入处理
+        document.getElementById('fmFolderInput').addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                uploadFMFiles(e.target.files);
+            }
+        });
+        
+        // 拖拽上传处理
+        const uploadArea = document.getElementById('fmUploadArea');
+        
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+        
+        async function readDirectoryEntries(directory, path = '') {
+            const entries = [];
+            const queue = [{ entry: directory, path: path }];
+            
+            while (queue.length > 0) {
+                const { entry: currentDir, path: currentPath } = queue.shift();
+                const reader = currentDir.createReader();
+                
+                let allEntries = [];
+                let readBatch;
+                do {
+                    readBatch = await new Promise((resolve, reject) => {
+                        reader.readEntries(resolve, reject);
+                    });
+                    allEntries = allEntries.concat(readBatch);
+                } while (readBatch.length > 0);
+                
+                for (const entry of allEntries) {
+                    const entryPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+                    
+                    if (entry.isFile) {
+                        const file = await new Promise((resolve, reject) => {
+                            entry.file(resolve, reject);
+                        });
+                        Object.defineProperty(file, 'webkitRelativePath', {
+                            value: entryPath,
+                            writable: false
+                        });
+                        entries.push(file);
+                    } else if (entry.isDirectory) {
+                        queue.push({ entry: entry, path: entryPath });
+                    }
+                }
+            }
+            
+            return entries;
+        }
+        
+        uploadArea.addEventListener('drop', async function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const items = e.dataTransfer.items;
+            if (!items || items.length === 0) {
+                return;
+            }
+            
+            const files = [];
+            
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i].webkitGetAsEntry();
+                if (!item) continue;
+                
+                if (item.isFile) {
+                    const file = await new Promise((resolve, reject) => {
+                        item.file(resolve, reject);
+                    });
+                    files.push(file);
+                } else if (item.isDirectory) {
+                    console.log('检测到文件夹，开始BFS读取...');
+                    const folderFiles = await readDirectoryEntries(item, item.name);
+                    files.push(...folderFiles);
+                    console.log(`文件夹读取完成，共 ${folderFiles.length} 个文件`);
+                }
+            }
+            
+            if (files.length > 0) {
+                console.log(`开始上传 ${files.length} 个文件`);
+                uploadFMFiles(files);
+            }
+        });
+        
+        // 点击模态框外部关闭
+        document.getElementById('fmUploadModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeUploadModal();
+            }
+        });
+        
+        document.getElementById('fmCreateFolderModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeCreateFolderModal();
+            }
+        });
+    </script>
+</body>
+</html>

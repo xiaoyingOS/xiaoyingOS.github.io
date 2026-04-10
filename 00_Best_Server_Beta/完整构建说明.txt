@@ -1,0 +1,334 @@
+=======================================
+Best Server 完整构建说明
+=======================================
+
+本项目位置：/data/data/com.termux/files/home/Server
+
+一、项目概述
+-----------
+本项目是一个高性能 C++ HTTP/HTTPS 服务器框架，支持文件上传、下载、WebSocket 等功能。
+
+二、项目目录结构
+---------------
+/data/data/com.termux/files/home/Server/
+├── include/                    # 框架头文件目录
+│   └── best_server/            # 公共头文件
+├── src/                        # 框架源代码目录
+│   ├── core/                   # 核心功能
+│   ├── io/                     # I/O 操作
+│   ├── network/                # 网络功能
+│   ├── logger/                 # 日志系统
+│   └── ...
+├── web/                        # Web 服务器应用目录
+│   ├── static/                 # 静态文件目录
+│   ├── uploads/                # 上传文件目录
+│   ├── server.cpp              # Web 服务器主程序
+│   ├── server_daemon.cpp       # 守护进程版本
+│   ├── CMakeLists.txt          # Web 服务器构建配置
+│   └── build/                  # Web 服务器构建输出目录
+├── examples/                   # 示例代码
+├── tests/                      # 单元测试
+├── benchmarks/                 # 性能测试
+├── CMakeLists.txt              # 框架构建配置
+├── build/                      # 框架构建输出目录
+└── libbest_server.a            # 框架静态库
+
+三、环境要求
+-----------
+- 操作系统：Linux/Android (Termux)
+- 编译器：Clang 21.1.6 或 GCC 9.0+
+- CMake：3.15 或更高版本
+- C++ 标准：C++20
+- 依赖库：
+  - OpenSSL 3.6.0（用于 TLS 支持）
+  - pthread（多线程支持）
+  - libarchive（用于压缩功能）
+
+四、完整构建流程（按顺序执行）
+-----------------------------
+
+【步骤1】构建 Best_Server 框架
+------------------------------
+此步骤会生成框架静态库 libbest_server.a
+
+1. 切换到项目根目录
+   cd /data/data/com.termux/files/home/Server
+
+2. 清理旧的构建文件（如果之前构建过）
+   rm -rf build CMakeCache.txt CMakeFiles Makefile cmake_install.cmake CTestTestfile.cmake
+
+3. 创建构建目录并配置项目
+   mkdir -p build
+   cd build
+   cmake ..
+
+   配置说明：
+   - CMake 会自动检测编译器、OpenSSL、pthread 等依赖
+   - 默认配置：开启测试和示例，关闭性能测试
+   - 构建类型：Release（优化模式）
+
+4. 编译框架（使用4个并行任务）
+   cmake --build . -j4
+
+5. 编译成功后，在以下位置生成文件：
+
+   【框架静态库】
+   位置：/data/data/com.termux/files/home/Server/build/libbest_server.a
+   大小：约 46MB
+   说明：这是核心框架库，供 Web 服务器链接使用
+
+   【测试程序】
+   位置：/data/data/com.termux/files/home/Server/build/test_upload_fix
+   大小：约 7.5MB
+   说明：用于测试文件上传功能
+
+   【单元测试】
+   位置：/data/data/com.termux/files/home/Server/build/tests/unit_tests
+   大小：约 5.1MB
+   说明：框架单元测试程序
+
+   【示例程序】
+   位置：/data/data/com.termux/files/home/Server/build/examples/simple_test
+   大小：约 747KB
+   说明：简单的使用示例
+
+6. 验证构建结果
+   ls -lh /data/data/com.termux/files/home/Server/build/libbest_server.a
+
+7. 返回项目根目录（为下一步做准备）
+   cd /data/data/com.termux/files/home/Server
+
+【步骤2】构建 Web 服务器
+-------------------------
+此步骤会生成可执行的 Web 服务器程序
+
+1. 切换到 Web 服务器目录
+   cd /data/data/com.termux/files/home/Server/web
+
+2. 清理旧的构建文件
+   rm -rf build CMakeCache.txt CMakeFiles Makefile cmake_install.cmake CTestTestfile.cmake
+
+3. 创建构建目录并配置项目
+   mkdir -p build
+   cd build
+   cmake ..
+
+   配置说明：
+   - CMake 会自动链接步骤1生成的 libbest_server.a
+   - 会自动查找 OpenSSL、pthread、libarchive 等依赖
+   - 默认监听端口：8080
+
+4. 编译 Web 服务器
+   cmake --build . -j4
+
+5. 编译成功后，在以下位置生成文件：
+
+   【标准 Web 服务器】
+   位置：/data/data/com.termux/files/home/Server/web/build/web_server
+   大小：约 11MB
+   说明：标准的 Web 服务器程序，支持所有功能
+
+   【守护进程版本】
+   位置：/data/data/com.termux/files/home/Server/web/build/web_server_daemon
+   大小：约 8.6MB
+   说明：守护进程版本，适合生产环境
+
+6. 验证构建结果
+   ls -lh /data/data/com.termux/files/home/Server/web/build/web_server
+   ls -lh /data/data/com.termux/files/home/Server/web/build/web_server_daemon
+
+五、启动 Web 服务器
+-------------------
+
+【方法1】前台运行（用于测试）
+-----------------------------
+1. 切换到 Web 服务器构建目录
+   cd /data/data/com.termux/files/home/Server/web/build
+
+2. 启动服务器
+   ./web_server
+
+3. 服务器启动后会在终端显示：
+   ========================================
+   Server started successfully!
+   ========================================
+   Address: http://0.0.0.0:8080
+   Static files: /data/data/com.termux/files/home/Server/web/static
+   Upload path: /data/data/com.termux/files/home/Server/web/uploads
+
+4. 按 Ctrl+C 停止服务器
+
+【方法2】后台运行（生产环境推荐）
+---------------------------------
+1. 切换到 Web 服务器构建目录
+   cd /data/data/com.termux/files/home/Server/web/build
+
+2. 启动服务器（后台运行）
+   nohup ./web_server > /data/data/com.termux/files/home/Server/web/server.log 2>&1 &
+
+3. 检查服务器是否启动成功
+   ps aux | grep web_server
+
+4. 查看服务器日志
+   tail -f /data/data/com.termux/files/home/Server/web/server.log
+
+5. 测试服务器是否正常工作
+   curl http://localhost:8080/api/status
+
+【方法3】使用守护进程版本
+-------------------------
+1. 切换到 Web 服务器构建目录
+   cd /data/data/com.termux/files/home/Server/web/build
+
+2. 启动守护进程服务器
+   ./web_server_daemon
+
+3. 检查运行状态
+   ps aux | grep web_server_daemon
+
+六、服务器配置信息
+-----------------
+
+默认配置：
+- 监听地址：0.0.0.0:8080
+- 静态文件目录：/data/data/com.termux/files/home/Server/web/static
+- 上传文件目录：/data/data/com.termux/files/home/Server/web/uploads
+- 最大连接数：10000000
+- 最大请求大小：5GB
+- 最大响应大小：5GB
+
+七、API 接口说明
+---------------
+
+服务器启动后，可以通过以下接口访问：
+
+1. 文件上传
+   - POST /upload              - 上传单个文件
+   - POST /upload/folder       - 上传文件夹（直接结构）
+
+2. 文件浏览
+   - GET /list/folder/*       - 列出文件夹内容
+   - GET /download/folder/*   - 获取文件夹文件列表
+   - GET /api/files           - 列出所有文件
+
+3. 文件下载
+   - GET /files/*             - 下载文件（支持断点续传）
+
+4. 服务器管理
+   - GET /api/status          - 服务器状态
+   - GET /api/metrics         - 系统指标
+   - GET /api/logs            - 服务器日志
+
+测试示例：
+```bash
+# 查看服务器状态
+curl http://localhost:8080/api/status
+
+# 列出所有文件
+curl http://localhost:8080/api/files
+
+# 上传文件
+curl -X POST -F "file=@test.txt" http://localhost:8080/upload
+```
+
+八、运行测试程序
+---------------
+
+1. 运行单元测试
+   cd /data/data/com.termux/files/home/Server/build/tests
+   ./unit_tests
+
+2. 运行示例程序
+   cd /data/data/com.termux/files/home/Server/build/examples
+   ./simple_test
+
+3. 运行上传功能测试
+   cd /data/data/com.termux/files/home/Server/build
+   ./test_upload_fix
+
+九、停止服务器
+---------------
+
+1. 查找服务器进程
+   ps aux | grep web_server
+
+2. 停止服务器（使用进程号）
+   kill <进程号>
+
+   例如：
+   kill 12345
+
+3. 强制停止（如果正常停止无效）
+   kill -9 <进程号>
+
+十、常见问题排查
+-----------------
+
+1. 编译错误：找不到 OpenSSL
+   解决：检查 OpenSSL 是否安装
+   find /data/data/com.termux/files/usr -name libssl.so
+   find /data/data/com.termux/files/usr -name libcrypto.so
+
+2. 运行时错误：端口被占用
+   解决：检查端口占用情况
+   netstat -tlnp | grep 8080
+   或修改服务器配置使用其他端口
+
+3. 权限问题：无法写入上传目录
+   解决：设置正确的权限
+   chmod 755 /data/data/com.termux/files/home/Server/web/uploads
+
+4. 服务器启动失败
+   解决：查看日志文件
+   cat /data/data/com.termux/files/home/Server/web/server.log
+
+十一、快速构建命令（一键复制）
+-----------------------------
+
+【完整构建流程】
+```bash
+cd /data/data/com.termux/files/home/Server && \
+rm -rf build CMakeCache.txt CMakeFiles Makefile cmake_install.cmake CTestTestfile.cmake && \
+mkdir -p build && cd build && cmake .. && cmake --build . -j4 && \
+cd /data/data/com.termux/files/home/Server/web && \
+rm -rf build CMakeCache.txt CMakeFiles Makefile cmake_install.cmake CTestTestfile.cmake && \
+mkdir -p build && cd build && cmake .. && cmake --build . -j4
+```
+
+【启动 Web 服务器】
+```bash
+cd /data/data/com.termux/files/home/Server/web/build && \
+nohup ./web_server > /data/data/com.termux/files/home/Server/web/server.log 2>&1 &
+```
+
+【停止 Web 服务器】
+```bash
+ps aux | grep web_server | grep -v grep | awk '{print $2}' | xargs kill
+```
+
+【测试服务器】
+```bash
+curl http://localhost:8080/api/status
+```
+
+十二、文件位置总结
+-----------------
+
+【框架相关文件】
+- 框架源代码：/data/data/com.termux/files/home/Server/src/
+- 框架头文件：/data/data/com.termux/files/home/Server/include/
+- 框架构建目录：/data/data/com.termux/files/home/Server/build/
+- 框架静态库：/data/data/com.termux/files/home/Server/build/libbest_server.a
+
+【Web 服务器相关文件】
+- Web 服务器源代码：/data/data/com.termux/files/home/Server/web/
+- Web 服务器构建目录：/data/data/com.termux/files/home/Server/web/build/
+- Web 服务器程序：/data/data/com.termux/files/home/Server/web/build/web_server
+- 守护进程程序：/data/data/com.termux/files/home/Server/web/build/web_server_daemon
+- 服务器日志：/data/data/com.termux/files/home/Server/web/server.log
+- 静态文件目录：/data/data/com.termux/files/home/Server/web/static/
+- 上传文件目录：/data/data/com.termux/files/home/Server/web/uploads/
+
+=======================================
+构建说明结束
+=======================================

@@ -1,0 +1,672 @@
+// Future - Promise-based async programming model
+// 
+// Implements a powerful future/promise system with:
+// - Coroutines support (C++20)
+// - Continuations
+// - Exception handling
+// - Combinators (then, when_all, when_any)
+// - Zero-copy value passing
+
+#ifndef BEST_SERVER_FUTURE_FUTURE_HPP
+#define BEST_SERVER_FUTURE_FUTURE_HPP
+
+#include <memory>
+#include <functional>
+#include <exception>
+#include <stdexcept>
+#include <vector>
+#include <atomic>
+#include <type_traits>
+#include <thread>
+#include <coroutine>
+
+#if BEST_SERVER_HAS_COROUTINES
+#include <coroutine>
+#endif
+
+#include "best_server/io/io_event_loop.hpp"
+
+namespace best_server {
+namespace future {
+
+// Forward declarations
+template<typename T>
+class Promise;
+
+template<typename T>
+class Future;
+
+// Global counter for debugging
+extern std::atomic<int> promise_set_value_call_count;
+
+// Exception types
+class FutureException : public std::runtime_error {
+public:
+    explicit FutureException(const std::string& msg) : std::runtime_error(msg) {}
+};
+
+class BrokenPromise : public FutureException {
+public:
+    BrokenPromise() : FutureException("Broken promise") {}
+};
+
+class FutureAlreadyRetrieved : public FutureException {
+public:
+    FutureAlreadyRetrieved() : FutureException("Future already retrieved") {}
+};
+
+// Future state
+template<typename T>
+class FutureState {
+public:
+    FutureState() : ready_(false), retrieved_(false) {}
+    
+    void set_value(const T& value) {
+        printf("[FutureState<T>] set_value(const T&) called\n");
+        fflush(stdout);
+        {
+            printf("[FutureState<T>] Acquiring lock...\n");
+            fflush(stdout);
+            std::lock_guard<std::mutex> lock(mutex_);
+            printf("[FutureState<T>] Lock acquired\n");
+            fflush(stdout);
+            if (ready_) {
+                printf("[FutureState<T>] Promise already satisfied!\n");
+                fflush(stdout);
+                throw FutureException("Promise already satisfied");
+            }
+            value_ = value;
+            ready_ = true;
+            printf("[FutureState<T>] value set, releasing lock\n");
+            fflush(stdout);
+        }
+        printf("[FutureState<T>] calling notify_all() (lock released)\n");
+        fflush(stdout);
+        notify_all();
+    }
+    
+    void set_value(T&& value) {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (ready_) {
+                throw FutureException("Promise already satisfied");
+            }
+            value_ = std::move(value);
+            ready_ = true;
+        }
+        notify_all();
+    }
+    
+    void set_exception(std::exception_ptr exc) {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (ready_) {
+                throw FutureException("Promise already satisfied");
+            }
+            exception_ = exc;
+            ready_ = true;
+        }
+        notify_all();
+    }
+    
+    T get() {
+        std::unique_lock<std::mutex> lock(mutex_);
+        if (!ready_) {
+            condition_.wait(lock, [this] { return ready_.load(); });
+        }
+        if (exception_) {
+            std::rethrow_exception(exception_);
+        }
+        if (retrieved_) {
+            throw FutureAlreadyRetrieved();
+        }
+        retrieved_ = true;
+        return std::move(value_);
+    }
+    
+    bool is_ready() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return ready_;
+    }
+    
+    void wait() {
+        std::unique_lock<std::mutex> lock(mutex_);
+        condition_.wait(lock, [this] { return ready_.load(); });
+    }
+    
+    template<typename Rep, typename Period>
+    bool wait_for(const std::chrono::duration<Rep, Period>& timeout) {
+        std::unique_lock<std::mutex> lock(mutex_);
+        return condition_.wait_for(lock, timeout, [this] { return ready_.load(); });
+    }
+    
+    void add_continuation(std::function<void()> continuation) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (ready_) {
+            continuation();
+        } else {
+            continuations_.push_back(std::move(continuation));
+        }
+    }
+    
+private:
+    void notify_all() {
+        condition_.notify_all();
+        
+        // Schedule continuations instead of calling them synchronously
+        // This is the Seastar-style approach - avoid blocking in event loop
+        if (!continuations_.empty()) {
+            // Move continuations to a local copy to avoid holding lock during execution
+            std::vector<std::function<void()>> local_continuations;
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                local_continuations = std::move(continuations_);
+            }
+            
+            // Schedule each continuation to run
+            for (auto& continuation : local_continuations) {
+                continuation();
+            }
+        }
+    }
+    
+    mutable std::mutex mutex_;
+    std::condition_variable condition_;
+    std::atomic<bool> ready_;
+    std::atomic<bool> retrieved_;
+    T value_;
+    std::exception_ptr exception_;
+    std::vector<std::function<void()>> continuations_;
+};
+
+// Future specialization for void
+template<>
+class FutureState<void> {
+public:
+    FutureState() : ready_(false), retrieved_(false) {}
+    
+    void set_value() {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (ready_) {
+                throw FutureException("Promise already satisfied");
+            }
+            ready_ = true;
+        }
+        notify_all();
+    }
+    
+    void set_exception(std::exception_ptr exc) {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (ready_) {
+                throw FutureException("Promise already satisfied");
+            }
+            exception_ = exc;
+            ready_ = true;
+        }
+        notify_all();
+    }
+    
+    void get() {
+        std::unique_lock<std::mutex> lock(mutex_);
+        if (!ready_) {
+            condition_.wait(lock, [this] { return ready_.load(); });
+        }
+        if (exception_) {
+            std::rethrow_exception(exception_);
+        }
+        if (retrieved_) {
+            throw FutureAlreadyRetrieved();
+        }
+        retrieved_ = true;
+    }
+    
+    bool is_ready() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return ready_;
+    }
+    
+    void wait() {
+        std::unique_lock<std::mutex> lock(mutex_);
+        condition_.wait(lock, [this] { return ready_.load(); });
+    }
+    
+    template<typename Rep, typename Period>
+    bool wait_for(const std::chrono::duration<Rep, Period>& timeout) {
+        std::unique_lock<std::mutex> lock(mutex_);
+        return condition_.wait_for(lock, timeout, [this] { return ready_.load(); });
+    }
+    
+    void add_continuation(std::function<void()> continuation) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (ready_) {
+            continuation();
+        } else {
+            continuations_.push_back(std::move(continuation));
+        }
+    }
+    
+private:
+    void notify_all() {
+        condition_.notify_all();
+        
+        printf("[FutureState] notify_all() called, continuations: %zu\n", continuations_.size());
+        fflush(stdout);
+        
+        // Schedule continuations through event loop if available
+        // This is the Seastar-style approach - avoid blocking in event loop
+        if (!continuations_.empty()) {
+            printf("[FutureState] Scheduling %zu continuations\n", continuations_.size());
+            fflush(stdout);
+            
+            // Move continuations to local copy to avoid holding lock during execution
+            std::vector<std::function<void()>> local_continuations;
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                local_continuations = std::move(continuations_);
+            }
+            
+            // Check if we have an event loop available
+            auto* event_loop = io::IOEventLoop::current();
+            
+            if (event_loop) {
+                printf("[FutureState] Event loop available, scheduling %zu continuations\n", local_continuations.size());
+                fflush(stdout);
+                // Schedule each continuation to run on the event loop
+                for (auto& continuation : local_continuations) {
+                    event_loop->schedule(std::move(continuation));
+                }
+            } else {
+                printf("[FutureState] No event loop available, running %zu continuations synchronously\n", local_continuations.size());
+                fflush(stdout);
+                // No event loop available, run synchronously
+                for (auto& continuation : local_continuations) {
+                    continuation();
+                }
+            }
+        }
+    }
+    
+    mutable std::mutex mutex_;
+    std::condition_variable condition_;
+    std::atomic<bool> ready_;
+    std::atomic<bool> retrieved_;
+    std::exception_ptr exception_;
+    std::vector<std::function<void()>> continuations_;
+};
+
+// Future
+template<typename T>
+class Future {
+public:
+    Future() : state_(nullptr) {}
+    
+    explicit Future(std::shared_ptr<FutureState<T>> state) : state_(std::move(state)) {}
+    
+    // Move only
+    Future(Future&& other) noexcept = default;
+    Future& operator=(Future&& other) noexcept = default;
+    Future(const Future&) = delete;
+    Future& operator=(const Future&) = delete;
+    
+    // Get the result
+    T get() {
+        if (!state_) {
+            throw FutureException("Invalid future");
+        }
+        return state_->get();
+    }
+    
+    // Check if ready
+    bool is_ready() const {
+        return state_ && state_->is_ready();
+    }
+    
+    // Wait for result
+    void wait() const {
+        if (state_) {
+            state_->wait();
+        }
+    }
+    
+    // Wait with timeout
+    template<typename Rep, typename Period>
+    bool wait_for(const std::chrono::duration<Rep, Period>& timeout) const {
+        return state_ ? state_->wait_for(timeout) : false;
+    }
+    
+    // Add continuation
+    template<typename F>
+    auto then(F&& func) -> Future<typename std::invoke_result<F, T>::type> {
+        using ResultType = typename std::invoke_result<F, T>::type;
+        auto promise = std::make_shared<Promise<ResultType>>();
+        auto future = promise->get_future();
+        
+        if (state_) {
+            state_->add_continuation([this, func = std::forward<F>(func), promise]() {
+                try {
+                    if constexpr (std::is_void_v<ResultType>) {
+                        func(state_->get());
+                        promise->set_value();
+                    } else {
+                        promise->set_value(func(state_->get()));
+                    }
+                } catch (...) {
+                    promise->set_exception(std::current_exception());
+                }
+            });
+        }
+        
+        return future;
+    }
+    
+#if BEST_SERVER_HAS_COROUTINES
+    // Coroutine support
+    struct promise_type {
+        Future<T> get_return_object() {
+            return Future<T>(state_);
+        }
+        
+        std::suspend_never initial_suspend() { return {}; }
+        std::suspend_never final_suspend() noexcept { return {}; }
+        
+        void return_value(T value) {
+            state_->set_value(std::move(value));
+        }
+        
+        void unhandled_exception() {
+            state_->set_exception(std::current_exception());
+        }
+        
+        std::shared_ptr<FutureState<T>> state_ = std::make_shared<FutureState<T>>();
+    };
+    
+    struct awaiter {
+        awaiter(std::shared_ptr<FutureState<T>> state) : state_(std::move(state)) {}
+        
+        bool await_ready() const noexcept {
+            return state_->is_ready();
+        }
+        
+        void await_suspend(std::coroutine_handle<> handle) {
+            state_->add_continuation([handle]() { handle.resume(); });
+        }
+        
+        T await_resume() {
+            return state_->get();
+        }
+        
+        std::shared_ptr<FutureState<T>> state_;
+    };
+    
+    awaiter operator co_await() {
+        return awaiter(state_);
+    }
+#endif
+    
+private:
+    std::shared_ptr<FutureState<T>> state_;
+    
+    template<typename U>
+    friend class Promise;
+};
+
+// Future specialization for void
+template<>
+class Future<void> {
+public:
+    Future() : state_(nullptr) {}
+    
+    explicit Future(std::shared_ptr<FutureState<void>> state) : state_(std::move(state)) {}
+    
+    // Move only
+    Future(Future&& other) noexcept = default;
+    Future& operator=(Future&& other) noexcept = default;
+    Future(const Future&) = delete;
+    Future& operator=(const Future&) = delete;
+    
+    void get() {
+        if (!state_) {
+            throw FutureException("Invalid future");
+        }
+        state_->get();
+    }
+    
+    bool is_ready() const {
+        return state_ && state_->is_ready();
+    }
+    
+    void wait() const {
+        if (state_) {
+            state_->wait();
+        }
+    }
+    
+    template<typename Rep, typename Period>
+    bool wait_for(const std::chrono::duration<Rep, Period>& timeout) const {
+        return state_ ? state_->wait_for(timeout) : false;
+    }
+    
+    template<typename F>
+    auto then(F&& func) -> Future<typename std::invoke_result<F>::type> {
+        using ResultType = typename std::invoke_result<F>::type;
+        auto promise = std::make_shared<Promise<ResultType>>();
+        auto future = promise->get_future();
+        
+        if (state_) {
+            state_->add_continuation([func = std::forward<F>(func), promise]() {
+                try {
+                    if constexpr (std::is_void_v<ResultType>) {
+                        func();
+                        promise->set_value();
+                    } else {
+                        promise->set_value(func());
+                    }
+                } catch (...) {
+                    promise->set_exception(std::current_exception());
+                }
+            });
+        }
+        
+        return future;
+    }
+    
+#if BEST_SERVER_HAS_COROUTINES
+    struct promise_type {
+        Future<void> get_return_object() {
+            return Future<void>(state_);
+        }
+        
+        std::suspend_never initial_suspend() { return {}; }
+        std::suspend_never final_suspend() noexcept { return {}; }
+        
+        void return_void() {
+            state_->set_value();
+        }
+        
+        void unhandled_exception() {
+            state_->set_exception(std::current_exception());
+        }
+        
+        std::shared_ptr<FutureState<void>> state_ = std::make_shared<FutureState<void>>();
+    };
+    
+    struct awaiter {
+        awaiter(std::shared_ptr<FutureState<void>> state) : state_(std::move(state)) {}
+        
+        bool await_ready() const noexcept {
+            return state_->is_ready();
+        }
+        
+        void await_suspend(std::coroutine_handle<> handle) {
+            state_->add_continuation([handle]() { handle.resume(); });
+        }
+        
+        void await_resume() {
+            state_->get();
+        }
+        
+        std::shared_ptr<FutureState<void>> state_;
+    };
+    
+    awaiter operator co_await() {
+        return awaiter(state_);
+    }
+#endif
+    
+private:
+    std::shared_ptr<FutureState<void>> state_;
+    
+    template<typename U>
+    friend class Promise;
+};
+
+// Promise
+template<typename T>
+class Promise {
+public:
+    Promise() : state_(std::make_shared<FutureState<T>>()), retrieved_(false) {}
+    
+    ~Promise() {
+        if (state_ && !retrieved_ && !state_->is_ready()) {
+            try {
+                throw BrokenPromise();
+            } catch (...) {
+                state_->set_exception(std::current_exception());
+            }
+        }
+    }
+    
+    Promise(Promise&& other) noexcept = default;
+    Promise& operator=(Promise&& other) noexcept = default;
+    Promise(const Promise&) = delete;
+    Promise& operator=(const Promise&) = delete;
+    
+    Future<T> get_future() {
+        if (retrieved_) {
+            throw FutureAlreadyRetrieved();
+        }
+        retrieved_ = true;
+        return Future<T>(state_);
+    }
+    
+    void set_value(const T& value) {
+        printf("=== ENTER Promise<T>::set_value ===\n");
+        fflush(stdout);
+        volatile int count = promise_set_value_call_count.fetch_add(1, std::memory_order_relaxed);
+        printf("[Promise<T>] set_value(const T&) called (count=%d)\n", count + 1);
+        fflush(stdout);
+        printf("[Promise<T>] state_ pointer: %p\n", static_cast<void*>(state_.get()));
+        fflush(stdout);
+        printf("[Promise<T>] state_.use_count(): %ld\n", state_.use_count());
+        fflush(stdout);
+        printf("[Promise<T>] About to call state_->set_value()\n");
+        fflush(stdout);
+        state_->set_value(value);
+        printf("[Promise<T>] set_value(const T&) returned\n");
+        fflush(stdout);
+        printf("=== EXIT Promise<T>::set_value ===\n");
+        fflush(stdout);
+    }
+    
+    void set_value(T&& value) {
+        state_->set_value(std::move(value));
+    }
+    
+    void set_exception(std::exception_ptr exc) {
+        state_->set_exception(exc);
+    }
+    
+private:
+    std::shared_ptr<FutureState<T>> state_;
+    bool retrieved_;
+};
+
+// Promise specialization for void
+template<>
+class Promise<void> {
+public:
+    Promise() : state_(std::make_shared<FutureState<void>>()), retrieved_(false) {}
+    
+    ~Promise() {
+        if (state_ && !retrieved_ && !state_->is_ready()) {
+            try {
+                throw BrokenPromise();
+            } catch (...) {
+                state_->set_exception(std::current_exception());
+            }
+        }
+    }
+    
+    Promise(Promise&& other) noexcept = default;
+    Promise& operator=(Promise&& other) noexcept = default;
+    Promise(const Promise&) = delete;
+    Promise& operator=(const Promise&) = delete;
+    
+    Future<void> get_future() {
+        if (retrieved_) {
+            throw FutureAlreadyRetrieved();
+        }
+        retrieved_ = true;
+        return Future<void>(state_);
+    }
+    
+    void set_value() {
+        state_->set_value();
+    }
+    
+    void set_exception(std::exception_ptr exc) {
+        state_->set_exception(exc);
+    }
+    
+private:
+    std::shared_ptr<FutureState<void>> state_;
+    bool retrieved_;
+};
+
+// Make a ready future
+template<typename T>
+Future<T> make_ready_future(T&& value) {
+    auto state = std::make_shared<FutureState<std::decay_t<T>>>();
+    state->set_value(std::forward<T>(value));
+    return Future<std::decay_t<T>>(state);
+}
+
+inline Future<void> make_ready_future() {
+    auto state = std::make_shared<FutureState<void>>();
+    state->set_value();
+    return Future<void>(state);
+}
+
+// Make a future from a callable
+template<typename T, typename F>
+Future<T> make_future(F&& func) {
+    auto state = std::make_shared<FutureState<T>>();
+    std::thread([state, func = std::forward<F>(func)]() {
+        try {
+            if constexpr (std::is_void_v<T>) {
+                func();
+                state->set_value();
+            } else {
+                state->set_value(func());
+            }
+        } catch (...) {
+            state->set_exception(std::current_exception());
+        }
+    }).detach();
+    return Future<T>(state);
+}
+
+// Make a failed future
+template<typename T>
+Future<T> make_exception_future(std::exception_ptr exc) {
+    auto state = std::make_shared<FutureState<T>>();
+    state->set_exception(exc);
+    return Future<T>(state);
+}
+
+} // namespace future
+} // namespace best_server
+
+#endif // BEST_SERVER_FUTURE_FUTURE_HPP

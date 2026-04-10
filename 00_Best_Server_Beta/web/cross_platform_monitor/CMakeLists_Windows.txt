@@ -1,0 +1,95 @@
+cmake_minimum_required(VERSION 3.10)
+project(SystemMonitorTest)
+
+# 设置C++标准
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# 根据平台设置不同的编译选项
+if(WIN32)
+    # Windows平台特定设置
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    message(STATUS "Building for Windows platform")
+elseif(UNIX AND NOT APPLE)
+    # Linux/Android平台
+    message(STATUS "Building for Linux/Android platform")
+elseif(APPLE)
+    # macOS平台
+    message(STATUS "Building for macOS platform")
+endif()
+
+# 创建可执行文件
+add_executable(system_monitor_test system_monitor_test.cpp)
+
+# 根据平台链接不同的库
+if(WIN32)
+    # Windows平台需要链接的库
+    target_link_libraries(system_monitor_test PRIVATE
+        pdh      # Performance Data Helper
+        psapi    # Process Status API
+        user32   # Windows User API
+        iphlpapi # IP Helper API for network statistics
+    )
+    
+    # 查找 NVML 库 (NVIDIA GPU 监控)
+    find_path(NVML_INCLUDE_DIR nvml.h
+        PATHS
+        "D:/NVIDIA/CUDA_Toolkit_NEED/include"
+        "$ENV{CUDA_PATH}/include"
+        "$ENV{CUDA_HOME}/include"
+        "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA*/include"
+    )
+    
+    find_library(NVML_LIBRARY
+        NAMES nvml
+        PATHS
+        "D:/NVIDIA/CUDA_Toolkit_NEED/lib/x64"
+        "$ENV{CUDA_PATH}/lib/x64"
+        "$ENV{CUDA_HOME}/lib/x64"
+        "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA*/lib/x64"
+    )
+    
+    # 如果找到 NVML，添加支持
+    if(NVML_INCLUDE_DIR AND NVML_LIBRARY)
+        target_include_directories(system_monitor_test PRIVATE ${NVML_INCLUDE_DIR})
+        target_link_libraries(system_monitor_test PRIVATE ${NVML_LIBRARY})
+        message(STATUS "NVML 支持: 已启用")
+        message(STATUS "  NVML include: ${NVML_INCLUDE_DIR}")
+        message(STATUS "  NVML library: ${NVML_LIBRARY}")
+    else()
+        message(STATUS "NVML 支持: 未找到 NVML 库")
+    endif()
+    
+    message(STATUS "Linking Windows libraries: pdh, psapi, user32")
+elseif(UNIX AND NOT APPLE)
+    # Linux/Android平台不需要额外的库
+    message(STATUS "No additional libraries needed for Linux/Android")
+elseif(APPLE)
+    # macOS平台特定库
+    target_link_libraries(system_monitor_test PRIVATE
+        "-framework IOKit"
+        "-framework CoreFoundation"
+    )
+    message(STATUS "Linking macOS frameworks: IOKit, CoreFoundation")
+endif()
+
+# 可选：添加优化选项
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        target_compile_options(system_monitor_test PRIVATE /O2)
+    else()
+        target_compile_options(system_monitor_test PRIVATE -O3)
+    endif()
+endif()
+
+# 设置输出目录（输出到项目根目录）
+set_target_properties(system_monitor_test PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}"
+)
+
+# 输出编译信息
+message(STATUS "C++ Standard: ${CMAKE_CXX_STANDARD}")
+message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")

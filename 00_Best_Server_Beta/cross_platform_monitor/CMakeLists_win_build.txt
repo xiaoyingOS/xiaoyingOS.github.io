@@ -1,0 +1,50 @@
+cmake_minimum_required(VERSION 3.10)
+project(SystemMonitorTest)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# 创建可执行文件
+add_executable(system_monitor_test system_monitor_test.cpp)
+
+# Windows 平台链接库
+if(WIN32)
+    # 基本系统库
+    target_link_libraries(system_monitor_test PRIVATE pdh psapi user32 iphlpapi)
+    
+    # 查找 NVML 库 (NVIDIA GPU 监控)
+    find_path(NVML_INCLUDE_DIR nvml.h
+        PATHS
+        "D:/NVIDIA/CUDA_Toolkit_NEED/include"
+        "$ENV{CUDA_PATH}/include"
+        "$ENV{CUDA_HOME}/include"
+        "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA*/include"
+    )
+    
+    find_library(NVML_LIBRARY
+        NAMES nvml
+        PATHS
+        "D:/NVIDIA/CUDA_Toolkit_NEED/lib/x64"
+        "$ENV{CUDA_PATH}/lib/x64"
+        "$ENV{CUDA_HOME}/lib/x64"
+        "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA*/lib/x64"
+    )
+    
+    # 如果找到 NVML，添加支持
+    if(NVML_INCLUDE_DIR AND NVML_LIBRARY)
+        target_include_directories(system_monitor_test PRIVATE ${NVML_INCLUDE_DIR})
+        target_link_libraries(system_monitor_test PRIVATE ${NVML_LIBRARY})
+        message(STATUS "NVML 支持: 已启用")
+        message(STATUS "  NVML include: ${NVML_INCLUDE_DIR}")
+        message(STATUS "  NVML library: ${NVML_LIBRARY}")
+    else()
+        message(STATUS "NVML 支持: 未找到 NVML 库")
+    endif()
+endif()
+
+# 设置输出目录（输出到项目根目录）
+set_target_properties(system_monitor_test PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}"
+)

@@ -1,0 +1,1 @@
+/data/data/com.termux/files/usr/bin/c++ -O2 -g -DNDEBUG -flto -Xlinker --dependency-file=CMakeFiles/unit_tests.dir/link.d CMakeFiles/unit_tests.dir/unit_tests.cpp.o -o unit_tests  ../libbest_server.a -lpthread /data/data/com.termux/files/usr/lib/libssl.so /data/data/com.termux/files/usr/lib/libcrypto.so
