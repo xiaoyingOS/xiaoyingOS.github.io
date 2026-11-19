@@ -7,6 +7,10 @@
     "start": "node server.js",
     "start-https": "node server-https.js"
   },
+  "engines": {
+    "node": "26.x",
+    "npm": ">=11"
+  },
   "dependencies": {
     "ws": "^8.14.2"
   }
